@@ -1,5 +1,5 @@
 Device::SerialPort
-VERSION=0.13, 2002 May 31
+VERSION=0.15, 2003 Jun 12
 
 Hello Serial Port users:
 
@@ -29,25 +29,13 @@ ioctl-based methods status, modemlines, and write_done. These act
 mostly like their Win32 cousins. Since they use ioctls, they are
 only available on systems that "can_ioctl".
 
-There are a small number of ioctl calls to handle the RTS and DTR
-outputs. Those require (from more or less traditional locations) the
-outputs from "h2ph" for ioctl.h and related files. If the module does
-not find the prerequisites, it disables the method calls that require
-them and sets "can_ioctl" false.
-	.../_h2ph_pre.ph	.../asm/termios.ph
-	.../asm/termbits.ph	.../asm/posix_types.ph
-	.../asm/ioctls.ph	.../asm/ioctl.ph
-	.../linux/posix_types.ph
-
-This module does not require a compiler or use XS. Since everything is
-(convoluted but still pure) perl, you can fix flaws and change limits
-if required. But please file a bug report if you do. I have tested with
-Perl 5.005_02 on Redhat 5.2. Some testing has occurred on AIX and Solaris
-as well.
-
 Version 0.09 adds further compatibility for other OSes, including AIX,
 Solaris, and OpenBSD.  Kees Cook is now maintaining this code for use
-with the Sendpage tool (http://sendpage.cpoint.net/).  
+with the Sendpage tool (http://sendpage.org/).  
+
+Version 0.15 uses XS to figure out the serial/modem bits needed to do
+all the state fiddling.  Pay close attention to the "configure" output
+warnings to find out about possible broken things on your system.
 
 COMPATIBILITY NOTES:
 
@@ -77,20 +65,13 @@ COMPATIBILITY NOTES:
 6. Version 0.07 changes parts of the configuration_file. You will need
    to save a new one - files from previous versions will not work.
 
-7. *BSD and HPUX have .h files that h2ph cannot handle.  Some day I
-   will write the XS code to correct grab the TIOCM* values correctly,
-   but until then, please check the top of SerialPort.pm for the
-   TIOCM* overrides.  Compile "show-tiocm.c" included with this packge
-   to verify that the magic ioctl values are the same for your system
-   as they are in systems I've checked.
-
-8. Right now, AIX will also fail some of the tests, including setting
+7. Right now, AIX will also fail some of the tests, including setting
    hardware flow control.  I'm working on fixing this.
 
-9. For Solaris, see the "SOLARIS TROUBLE" section below.
+8. For Solaris, see the "SOLARIS TROUBLE" section below.
 
-10. Please only use "read(255)" unless you've tested other reading methods.
-    There have been reports of dropped characters using other functions.
+9. Please only use "read(255)" unless you've tested other reading methods.
+   There have been reports of dropped characters using other functions.
 
 See the NOTES and KNOWN LIMITATIONS in the SerialPort documentation. The
 ".pod" is embedded in the ".pm". The comments on "-w" and "use strict"
@@ -104,10 +85,12 @@ FILES:
 
     Changes		- for history lovers
     Makefile.PL		- the "starting point" for traditional reasons
-    MANIFEST		- file list
+    configure           - used to find the correct headers for SerialPort.xs
+    config.h.in         - used to build config.h, used by SerialPort.xs
+    MANIFEST		- distribution file list
     README		- this file
-    Device-SerialPort.html	- documentation
     SerialPort.pm	- the reason you're reading this
+    SerialPort.xs       - the C code to get all the serial bits from .h files
     modemtest           - quick tool for checking on serial port
     show-tiocm.c        - simple C tool to report TIOCM* hacks
 
@@ -136,6 +119,8 @@ FILES:
     eg/example6.txt
     eg/example7.txt
     eg/example8.txt
+
+    autotools/*         - various tools used by the "configure" script
 
 INSTALL and TEST:
 

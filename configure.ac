@@ -1,0 +1,146 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_PREREQ(2.53)
+AC_INIT([Device::SerialPort],0.15,devser-bugs@outflux.net)
+AC_REVISION($Revision$)
+AC_CONFIG_SRCDIR([SerialPort.xs])
+AC_CONFIG_AUX_DIR(autotools)
+AC_CONFIG_HEADERS([config.h])
+
+AC_PROG_CC
+AC_PROG_CC_STDC
+AC_HEADER_STDC
+AC_ISC_POSIX
+
+dnl Find all the possible headers our little friends are hiding in
+AC_CHECK_HEADERS(sys/ioctl.h)		dnl Linux
+AC_CHECK_HEADERS(termios.h)		dnl Linux
+AC_CHECK_HEADERS(sys/termiox.h)		dnl AIX
+AC_CHECK_HEADERS(sys/termios.h)		dnl OpenBSD
+AC_CHECK_HEADERS(sys/ttycom.h)		dnl OpenBSD
+AC_CHECK_HEADERS(sys/modem.h)		dnl HPUX
+
+dnl Actually find all the defines in the suspected headers
+AC_LANG(C)
+for kees_define in \
+	TIOCMBIS TIOCMBIC TIOCMGET \
+	CRTSCTS OCRNL ONLCR ECHOKE ECHOCTL \
+	TIOCM_CAR TIOCM_CD TIOCM_RNG TIOCM_RI TIOCM_CTS TIOCM_DSR \
+	TIOCINQ TIOCOUTQ TIOCSER_TEMT TIOCM_LE \
+	TIOCSERGETLSR \
+	TIOCSDTR TIOCCDTR \
+	TIOCM_RTS TIOCM_DTR \
+	CTSXON RTSXOFF TCGETX TCSETX \
+	; do
+	AC_MSG_CHECKING([definition of $kees_define])
+	AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[
+#ifdef HAVE_SYS_IOCTL_H
+# include <sys/ioctl.h>
+#endif
+#ifdef HAVE_TERMIOS_H
+# include <termios.h>
+#endif
+#ifdef HAVE_SYS_TERMIOX_H
+# include <sys/termiox.h>
+#endif
+#ifdef HAVE_SYS_TERMIOS_H
+# include <sys/termios.h>
+#endif
+#ifdef HAVE_SYS_TTYCOM_H
+# include <sys/ttycom.h>
+#endif
+#ifdef HAVE_SYS_MODEM_H
+# include <sys/modem.h>
+#endif
+			]],
+			[int a=$kees_define])
+		],
+		[
+			eval "kees_got_$kees_define=yes"
+			AC_MSG_RESULT([found])
+		],
+		[
+			eval "kees_got_$kees_define=no"
+			AC_MSG_RESULT([missing])
+		]
+	)
+done
+
+dnl **************************************
+dnl Verify per-usage sanity of the defines
+dnl **************************************
+
+dnl Can ioctl at all
+AC_MSG_CHECKING([[serial control via ioctl]])
+if test "$kees_got_TIOCMBIS" = "yes" &&
+   test "$kees_got_TIOCMBIC" = "yes"; then
+	AC_MSG_RESULT([yes])
+else
+	AC_MSG_RESULT([no])
+	AC_MSG_WARN([[Without ioctl support, most serial control functions are missing]])
+fi
+
+dnl Get/Set RTS
+AC_MSG_CHECKING([[read/write of RTS signal]])
+if test "$kees_got_TIOCMBIS" = "yes" &&
+   test "$kees_got_TIOCMBIC" = "yes" &&
+   test "$kees_got_TIOCM_RTS" = "yes"; then
+	AC_MSG_RESULT([yes])
+else
+	AC_MSG_RESULT([no])
+	AC_MSG_WARN([[You will not be able to check or change the RTS line (direct flow control)]])
+fi
+
+dnl Get/Set DTR
+AC_MSG_CHECKING([[read/write of DTR signal]])
+if test "$kees_got_TIOCMBIS" = "yes" &&
+   test "$kees_got_TIOCMBIC" = "yes" &&
+   test "$kees_got_TIOCM_DTR" = "yes"; then
+	AC_MSG_RESULT([yes])
+else
+	AC_MSG_RESULT([no])
+	AC_MSG_WARN([[You will not be able to check or change the DTR line (modem hang up)]])
+fi
+
+dnl Get modem lines
+AC_MSG_CHECKING([[read access to modem lines]])
+if test "$kees_got_TIOCMGET" = "yes"; then
+	AC_MSG_RESULT([yes])
+else
+	AC_MSG_RESULT([no])
+	AC_MSG_WARN([[You will not be able to check modem status lines (carrier, ring, etc)]])
+fi
+
+dnl Get Buffer Status
+AC_MSG_CHECKING([[read access to buffer status]])
+if test "$kees_got_TIOCINQ" = "yes" &&
+   test "$kees_got_TIOCOUTQ" = "yes"; then
+	AC_MSG_RESULT([yes])
+else
+	AC_MSG_RESULT([no])
+	AC_MSG_WARN([[You will not be able to check the serial buffer state (to test for flushes)]])
+fi
+
+dnl Get Line Status
+AC_MSG_CHECKING([[read access to serial line status]])
+if test "$kees_got_TIOCSERGETLSR" = "yes"; then
+	AC_MSG_RESULT([yes])
+else
+	AC_MSG_RESULT([no])
+	AC_MSG_WARN([[You will not be able to check serial line status (to do full write flush)]])
+fi
+
+dnl Weird Flow Control Setting
+AC_MSG_CHECKING([[weird CTS/RTS flow control]])
+if test "$kees_got_CTSXON" = "yes" &&
+   test "$kees_got_RTSXOFF" = "yes" &&
+   test "$kees_got_TCGETX" = "yes" &&
+   test "$kees_got_TCSETX" = "yes"; then
+	AC_MSG_RESULT([yes])
+	AC_MSG_WARN([[Your system does CTS/RTS flow control strangely.  Hopefully, we can work around it]])
+else
+	AC_MSG_RESULT([no])
+fi
+
+AC_OUTPUT
