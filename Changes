@@ -90,3 +90,6 @@ Revision history for Perl extension Device::SerialPort.
         - fixed the HPUX tioc* stuff, care of
                 "Chang, Jerry" <Jerry.Chang@pyxis.com>
 
+0.14 (Kees)
+        - fixed some truth bugs found by David Dyck <david.dyck@fluke.com>
+

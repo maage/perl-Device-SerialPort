@@ -240,7 +240,7 @@ use Carp;
 use strict;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '0.13';
+$VERSION = '0.14';
 
 require Exporter;
 
@@ -559,7 +559,7 @@ sub new {
 
 sub write_settings {
     my $self = shift;
-    my $item;
+    my $item, $result;
 
     # put current values into Termios structure
     $self->{TERMIOS}->setcflag($self->{"C_CFLAG"});
@@ -573,12 +573,13 @@ sub write_settings {
 	$self->{TERMIOS}->setcc($c_cc_fields{$item}, $self->{"C_$item"});
     }
 
-    $self->{TERMIOS}->setattr($self->{FD}, &POSIX::TCSANOW);
+    $result = $self->{TERMIOS}->setattr($self->{FD}, &POSIX::TCSANOW);
 
     if ($Babble) {
         print "writing settings to $self->{ALIAS}\n";
     }
-    1;
+   
+    return $result; 
 }
 
 sub save {
@@ -1946,7 +1947,7 @@ sub dtr_active {
     return unless (@_ == 2);
     my $self = shift;
     return unless $self->can_ioctl();
-    my $on = shift;
+    my $on = yes_true( shift );
     my $rc;
 
     # if we have set DTR and clear DTR, we should use it (OpenBSD)
@@ -1970,7 +1971,7 @@ sub rts_active {
     return unless (@_ == 2);
     my $self = shift;
     return unless ($self->can_rts());
-    my $on = shift;
+    my $on = yes_true( shift );
     # returns ioctl result
     my $rc=ioctl($self->{HANDLE}, $on ? $bitset : $bitclear, $rtsout);
     warn "rts_active($on) ioctl: $!\n" if (!$rc);
