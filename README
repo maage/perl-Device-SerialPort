@@ -86,6 +86,9 @@ COMPATIBILITY NOTES:
 
 9. For Solaris, see the "SOLARIS TROUBLE" section below.
 
+10. Please only use "read(255)" unless you've tested other reading methods.
+    There have been reports of dropped characters using other functions.
+
 See the NOTES and KNOWN LIMITATIONS in the SerialPort documentation. The
 ".pod" is embedded in the ".pm". The comments on "-w" and "use strict"
 are especially relevant when you start calling this module from your own
@@ -274,6 +277,7 @@ Thanks,
 -bill
 (and now Kees Cook <cook@cpoint.net>)
 
-Copyright (C) 1999, Bill Birthisel, 2001, Kees Cook. All rights reserved.
+Copyright (C) 1999, Bill Birthisel, 2001,2002 Kees Cook. All rights reserved.
 This module is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
+
