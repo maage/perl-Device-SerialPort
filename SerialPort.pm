@@ -49,6 +49,10 @@ require Exporter;
                                 MS_DTR_ON   MS_RTS_ON
                                 ST_BLOCK	ST_INPUT
                                 ST_OUTPUT	ST_ERROR
+                                TIOCM_CD TIOCM_RI
+                                TIOCM_DSR TIOCM_DTR
+                                TIOCM_CTS TIOCM_RTS
+                                TIOCM_LE
                                )],
 
                 PARAM	=> [qw( LONGsize	SHORTsize	OS_Error
@@ -105,18 +109,24 @@ sub TIOCM_LE { return $bits->{'TIOCSER_TEMT'} || $bits->{'TIOCM_LE'} || 0; }
 
 ## Next 4 use Win32 names for compatibility
 
-sub MS_RLSD_ON { return $bits->{'TIOCM_CAR'} || $bits->{'TIOCM_CD'} || 0;
-}
+sub MS_RLSD_ON { return TIOCM_CD(); }
+sub TIOCM_CD { return $bits->{'TIOCM_CAR'} || $bits->{'TIOCM_CD'} || 0; }
 
-sub MS_RING_ON { return $bits->{'TIOCM_RNG'} || $bits->{'TIOCM_RI'} || 0; }
+sub MS_RING_ON { return TIOCM_RI(); }
+sub TIOCM_RI { return $bits->{'TIOCM_RNG'} || $bits->{'TIOCM_RI'} || 0; }
 
-sub MS_CTS_ON { return $bits->{'TIOCM_CTS'} || 0; }
+sub MS_CTS_ON { return TIOCM_CTS(); }
+sub TIOCM_CTS { return $bits->{'TIOCM_CTS'} || 0; }
 
-sub MS_DSR_ON { return $bits->{'TIOCM_DSR'} || 0; }
+sub MS_DSR_ON { return TIOCM_DSR(); }
+sub TIOCM_DSR { return $bits->{'TIOCM_DSR'} || 0; }
 
 # For POSIX completeness
-sub MS_RTS_ON { return $bits->{'TIOCM_RTS'} || 0; }
-sub MS_DTR_ON { return $bits->{'TIOCM_DTR'} || 0; }
+sub MS_RTS_ON { return TIOCM_RTS(); }
+sub TIOCM_RTS { return $bits->{'TIOCM_RTS'} || 0; }
+
+sub MS_DTR_ON { return TIOCM_DTR(); }
+sub TIOCM_DTR { return $bits->{'TIOCM_DTR'} || 0; }
 
 # "status"
 sub ST_BLOCK	{0}	# status offsets for caller
@@ -692,6 +702,16 @@ sub can_ioctl {
 
 sub can_modemlines {
     return 1 if (defined($bits->{'TIOCMGET'}));
+    return 0;
+}
+
+sub can_wait_modemlines {
+    return 1 if (defined($bits->{'TIOCMIWAIT'}));
+    return 0;
+}
+
+sub can_intr_count {
+    return 1 if (defined($bits->{'TIOCGICOUNT'}));
     return 0;
 }
 
@@ -1929,16 +1949,18 @@ sub modemlines {
 sub wait_modemlines {
     return undef unless (@_ == 2);
     my $self = shift;
-    return undef unless ($self->can_modemlines);
+    my $flags = shift;
+    return undef unless ($self->can_wait_modemlines);
 
-    my $mstat = pack('L',shift);
+    warn "wait flag value: ",$flags,"\n";
+    my $mstat = pack('L',$flags);
     return $self->ioctl('TIOCMIWAIT',\$mstat);
 }
 
 sub intr_count {
     return undef unless (@_ == 1);
     my $self = shift;
-    return undef unless ($self->can_modemlines);
+    return undef unless ($self->can_intr_count);
 
     my $mstat = pack('L',0);
     return $self->ioctl('TIOCGICOUNT',\$mstat);
@@ -2516,6 +2538,9 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
   $PortObj->can_ioctl;			# automatically detected by eval
   $PortObj->can_status;			# automatically detected by eval
   $PortObj->can_write_done;		# automatically detected by eval
+  $PortObj->can_modemlines;     # automatically detected by eval
+  $PortObj->can_wait_modemlines;# automatically detected by eval
+  $PortObj->can_intr_count;		# automatically detected by eval
 
 =head2 Operating Methods
 
@@ -2529,8 +2554,20 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
   if ($string_in = $PortObj->input) { PortObj->write($string_in); }
      # simple echo with no control character processing
 
-  $ModemStatus = $PortObj->modemlines;
-  if ($ModemStatus & $PortObj->MS_RLSD_ON) { print "carrier detected"; }
+  if ($PortObj->can_wait_modemlines) {
+    $rc = $PortObj->wait_modemlines();
+    if (!$rc) { print "modemline status changed\n"; }
+  }
+
+  if ($PortObj->can_modemlines) {
+    $ModemStatus = $PortObj->modemlines;
+    if ($ModemStatus & $PortObj->MS_RLSD_ON) { print "carrier detected\n"; }
+  }
+
+  if ($PortObj->can_intr_count) {
+    $count = $PortObj->intr_count();
+    print "got $count interrupts\n";
+  }
 
   ($BlockingFlags, $InBytes, $OutBytes, $ErrorFlags) = $PortObj->status;
       # same format for compatibility. Only $InBytes and $OutBytes are
@@ -3031,7 +3068,8 @@ Utility subroutines and constants for parameter setting and test:
 =item :STAT
 
 The Constants named BM_* and CE_* are omitted. But the modem status (MS_*)
-Constants are defined for possible use with B<modemlines>. They are
+Constants are defined for possible use with B<modemlines> and
+B<wait_modemlines>. They are
 assigned to corresponding functions, but the bit position will be
 different from that on Win32.
 
@@ -3044,6 +3082,10 @@ Which incoming bits are active:
     MS_RTS_ON    - Request to send (might not exist on Win32)
     MS_DTR_ON    - Data terminal ready (might not exist on Win32)
 
+If you want to write more POSIX-looking code, you can use the constants
+seen there, instead of the Win32 versions:
+
+    TIOCM_CTS, TIOCM_DSR, TIOCM_RI, TIOCM_CD, TIOCM_RTS, and TIOCM_DTR
 
 Offsets into the array returned by B<status:>
 
@@ -3053,6 +3095,51 @@ Offsets into the array returned by B<status:>
 
 All of the above. Except for the I<test suite>, there is not really a good
 reason to do this.
+
+=back
+
+=head1 PINOUT
+
+Here is a handy pinout map, showing each line and signal on a standard DB9
+connector:
+
+=over 8
+
+=item 1 DCD
+
+Data Carrier Detect
+
+=item 2 RD
+
+Receive Data
+
+=item 3 TD
+
+Transmit Data
+
+=item 4 DTR
+
+Data Terminal Ready
+
+=item 5 SG
+
+Signal Ground
+
+=item 6 DSR
+
+Data Set Ready
+
+=item 7 RTS
+
+Request to Send
+
+=item 8 CTS
+
+Clear to Send
+
+=item 9 RI
+
+Ring Indicator
 
 =back
 
