@@ -96,5 +96,5 @@ grep -v '.bak$' |xargs --no-run-if-empty \
 [ "%{buildroot}" != "/" ] && rm -rf %{buildroot}
 %files -f %filelist
 %changelog
-* Thu Jan 15 2004 root@octopus.pdx.osdl.net
+* Thu Jan 15 2004 kees@outflux.net
 - Initial build.

@@ -11,6 +11,9 @@ Revision history for Perl extension Device::SerialPort.
 	- setting defaults of 9600, 8N1, no flow in "new"
 	- added MS_DTR_ON and MS_DSR_ON
 	- clearly documenting "carrier" bit
+	- added automatic system baud rate detection
+	- added modem line reporting to "modemtest"
+	- documented "modemtest"
 
 0.22 2003-06-18 (Kees)
 	- added a notice about 4096 read limits on some machines

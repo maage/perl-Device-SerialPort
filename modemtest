@@ -70,7 +70,9 @@ it under the same terms ans Perl itself.
 =cut
 
 printf "Device::SerialPort v%d.%d.%d loaded.\n",
-       ("${Device::SerialPort::VERSION}000000"=~/^(\d+)\.(\d{3})(\d{3})/);
+        int(${Device::SerialPort::VERSION}),
+        (int(${Device::SerialPort::VERSION}*1000)=~/(\d{3})$/),
+        (int(${Device::SerialPort::VERSION}*1000000)=~/(\d{3})$/);
 
 # your serial port.
 my ($device,$baudrate,$databits,$parity,$stopbits,$handshake)=@ARGV;
