@@ -1,7 +1,7 @@
 Revision history for Perl extension Device::SerialPort.
 
 0.23 (CVS)
-	
+	- fixed logic in READ tie function from Jaakko Yli-Luukko	
 
 0.22 2003-06-18 (Kees)
 	- added a notice about 4096 read limits on some machines

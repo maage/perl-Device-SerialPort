@@ -2152,7 +2152,8 @@ sub READ {
 
     ($count_in, $string_in) = $self->read($size);
 
-    my $tail = substr($$buf, $offset + $count_in);
+    $$buf="" unless (defined($$buf));
+    my $tail = substr($$buf, $offset);
     my $head = substr($$buf, 0, $offset);
     $$buf = $head.$string_in.$tail;
     return $count_in;
