@@ -1,0 +1,14 @@
+Basic Installation
+==================
+
+   These are generic installation instructions.  For detailed instructions
+please see the "README" file included with this package.  The commands
+needed to build and install this package are:
+
+  perl Makefile.PL
+  make
+  make install
+
+   If you have a serial port available (with nothing plugged into it),
+you can also run "make test".  See "README" for more details.
+

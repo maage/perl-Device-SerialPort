@@ -1,6 +1,11 @@
 Revision history for Perl extension Device::SerialPort.
 
 0.22 (CVS) (Kees)
+	- built an rpm .spec file with the help of cpan2rpm.
+	- adding TESTPORT=... as a Makefile.PL option to not step on
+          MakeMaker's feet.
+	- making "modemtest" an installable script (which adds #! to top).
+	- cleaning up "modemtest" args and output.
 	- reversing configure report so "best" case reports "yes" for all.
 
 0.21 2003-06-12 (Kees)

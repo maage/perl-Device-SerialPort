@@ -39,3 +39,4 @@ autotools/install-sh
 autotools/missing
 autotools/mkinstalldirs
 show-tiocm.c.test
+Device-SerialPort.spec
