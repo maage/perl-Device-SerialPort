@@ -1,6 +1,5 @@
-Last updated May 31, 2002
+Last updated Jun 12, 2003
 
-- write XS routines to get ioctl stuff from .h files instead of .ph files
 - fix AIX hardware flow control
 - fix lockfile support
 

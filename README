@@ -43,34 +43,29 @@ COMPATIBILITY NOTES:
    just SerialPort.pm. The examples in alpha version 0.02 (limited
    release only) work fine when the Namespace is updated.
 
-2. The Tied FileHandle support works fully on 5.005, mostly on 5.004,
-   and essentially NOT on 5.003. This is due to the level of support
-   in the underlying Perl - not to the module implementation. The module
-   supports all tie methods and even handles output_separators.
-
-3. Unlike Win32::SerialPort, this distribution uses Makefile.PL and the
+2. Unlike Win32::SerialPort, this distribution uses Makefile.PL and the
    "standard" install sequence for CPAN modules:
 	perl Makefile.PL
 	make
 	make test
 	make install
 
-4. The GetTickCount method has been renamed to get_tick_count to conform
+3. The GetTickCount method has been renamed to get_tick_count to conform
    to normal naming style. A corresponding method has been added to the
    Win32 version to facilitate portability.
 
-5. The save, start, and restart methods are now supported. The format of
+4. The save, start, and restart methods are now supported. The format of
    the configuration_file is not identical to the Win32 one.
 
-6. Version 0.07 changes parts of the configuration_file. You will need
+5. Version 0.07 changes parts of the configuration_file. You will need
    to save a new one - files from previous versions will not work.
 
-7. Right now, AIX will also fail some of the tests, including setting
+6. Right now, AIX will also fail some of the tests, including setting
    hardware flow control.  I'm working on fixing this.
 
-8. For Solaris, see the "SOLARIS TROUBLE" section below.
+7. For Solaris, see the "SOLARIS TROUBLE" section below.
 
-9. Please only use "read(255)" unless you've tested other reading methods.
+8. Please only use "read(255)" unless you've tested other reading methods.
    There have been reports of dropped characters using other functions.
 
 See the NOTES and KNOWN LIMITATIONS in the SerialPort documentation. The
@@ -155,10 +150,8 @@ prompt.
 
 SOLARIS TROUBLE:
 
-	  Some headers under Solaris don't behave very well, so I had
-          to define "__sparc" explicitly in Device::SerialPort.
+	  The big problem is with Solaris' handling of DTR. 
 
-	  However, the big problem is with Solaris' handling of DTR. 
           Depending on hardware, patchlevel, or something very mystical, if
 	  you have an "se" or "zs" serial port (run "modinfo | grep serial"
 	  to find out), you may need to correct this DTR bug by adding a
@@ -264,10 +257,10 @@ or CPAN under authors/id/C/CO/COOK or Device::SerialPort
 
 Thanks,
 
--bill
-(and now Kees Cook <kees@outflux.net>)
+-Kees <kees@outflux.net>
 
-Copyright (C) 1999, Bill Birthisel, 2001,2002 Kees Cook. All rights reserved.
+Copyright (C) 1999, Bill Birthisel. All rights reserved.
+Copyright (C) 2001-2003 Kees Cook. All rights reserved.
 This module is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
 
