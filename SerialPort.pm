@@ -21,11 +21,21 @@ $DEBUG=0; # turn this on to debug the *.ph hunting...
 use vars qw($ioctl_ok);
 $ioctl_ok = 0;
 
+use vars qw($ms_per_tick);
+$ms_per_tick = 1000.0 / POSIX::sysconf(&POSIX::_SC_CLK_TCK);
+
 # Needed on some misbehaving Solaris machines... (h2ph's fault...) -Kees
 ($sysname, $nodename, $release, $version, $machine) = POSIX::uname();
 if ($sysname eq "SunOS" && $machine =~ /^sun/) {
 	eval "sub __sparc () {1;}";
 }
+if ($sysname =~ /^(Free|Net|Open)BSD$/) {                                      
+        # h2ph's fault on *BSD: sizeof(something) cannot be interpreted         
+        # inside perl, so since the BSD ioctl commands encode sizeof(arg)       
+        # into their value, all ioctls that take arguments get the wrong        
+        # value assigned.  Manually overwrite this where needed.                
+        eval "sub TIOCMGET { 0x4004746a; }";                                    
+}            
 
 # Need to determine location (Linux, Solaris, AIX, BSD known & working)
 @LOCATIONS=(	
@@ -337,7 +347,7 @@ my $zero=0;
 sub get_tick_count {
 	# clone of Win32::GetTickCount - perhaps same 49 day problem
     my ($real2, $user2, $system2, $cuser2, $csystem2) = POSIX::times();
-    $real2 *= 10.0;
+    $real2 *= $SerialJunk::ms_per_tick;
     ## printf "real2 = %8.0f\n", $real2;
     return int $real2;
 }
