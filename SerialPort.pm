@@ -2180,9 +2180,30 @@ sub READ {
 
     ($count_in, $string_in) = $self->read($size);
 
-    $$buf="" unless (defined($$buf));
-    my $tail = substr($$buf, $offset);
-    my $head = substr($$buf, 0, $offset);
+    $$buf = '' unless defined $$buf;
+    my $buflen = length $$buf;
+
+    my ($tail, $head) = ('','');
+
+    if($offset >= 0){ # positive offset
+       if($buflen > $offset + $count_in){
+           $tail = substr($$buf, $offset + $count_in);
+       }
+
+       if($buflen < $offset){
+           $head = $$buf . ("\0" x ($offset - $buflen));
+       } else {
+           $head = substr($$buf, 0, $offset);
+       }
+    } else { # negative offset
+       $head = substr($$buf, 0, ($buflen + $offset));
+
+       if(-$offset > $count_in){
+           $tail = substr($$buf, $offset + $count_in);
+       }
+    }
+
+    # remaining unhandled case: $offset < 0 && -$offset > $buflen
     $$buf = $head.$string_in.$tail;
     return $count_in;
 }

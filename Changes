@@ -1,5 +1,8 @@
 Revision history for Perl extension Device::SerialPort.
 
+1.2.1 (CVS)
+	* SerialPort.pm: correction to READ by Martin Hans
+
 1.2.0 2004-11-09 (Kees)
 	* configure.ac: corrected version number here too.
 	* SerialPort.pm: added wait_modemlines, intr_count.
