@@ -4,7 +4,6 @@
 #
 %define pkgname Device-SerialPort
 %define filelist %{pkgname}-%{version}-filelist
-%define NVR %{pkgname}-%{version}-%{release}
 %define maketest 0
 # Be sure to change both
 %define pkgversion 1

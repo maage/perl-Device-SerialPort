@@ -433,8 +433,19 @@ sub new {
     $self->{"C_IFLAG"} &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
     $self->{"C_OFLAG"} &= ~OPOST;
     $self->{"C_LFLAG"} &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
-    $self->{"C_CFLAG"} &= ~(CSIZE|PARENB);
-    $self->{"C_CFLAG"} |= (CS8|CLOCAL);
+
+    # 8data bits
+    $self->{"C_CFLAG"} &= ~CSIZE;
+    $self->{"C_CFLAG"} |= CS8;
+
+    # disable parity
+    $self->{"C_CFLAG"} &= ~PARENB;
+
+    # 1 stop bit
+    $self->{"C_CFLAG"} &= ~CSTOPB;
+
+    # Sane port
+    $self->{"C_CFLAG"} |= (CLOCAL|CREAD);
     &write_settings($self);
 
     $self->{ALIAS} = $self->{NAME};	# so "\\.\+++" can be changed
@@ -478,6 +489,7 @@ sub new {
     return $self;
 }
 
+# Returns "1" on success
 sub write_settings {
     my $self = shift;
     my ($item, $result);
@@ -494,10 +506,15 @@ sub write_settings {
 	$self->{TERMIOS}->setcc($c_cc_fields{$item}, $self->{"C_$item"});
     }
 
-    $result = $self->{TERMIOS}->setattr($self->{FD}, &POSIX::TCSANOW);
+    # setattr returns undef on failure
+    $result = defined($self->{TERMIOS}->setattr($self->{FD}, &POSIX::TCSANOW));
 
     if ($Babble) {
         print "writing settings to $self->{ALIAS}\n";
+    }
+
+    if (!$result) {
+	carp "Failed to set termios settings\n";
     }
    
     return $result; 
@@ -759,7 +776,7 @@ sub handshake {
             if ($self->{U_MSG} or $Babble) {
                 carp "Can't set handshake on $self->{ALIAS}";
             }
-	    return;
+	    return undef;
         }
 	write_settings($self);
     }
@@ -801,16 +818,17 @@ sub baudrate {
 sub parity {
     my $self = shift;
     if (@_) {
+        # Should always strip the parity bit
 	if ( $_[0] eq "none" ) {
-	    $self->{"C_IFLAG"} &= ~INPCK;
+	    $self->{"C_IFLAG"} &= ~(INPCK|ISTRIP);
 	    $self->{"C_CFLAG"} &= ~PARENB;
 	}
 	elsif ( $_[0] eq "odd" ) {
-	    $self->{"C_IFLAG"} |= INPCK;
+	    $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
 	    $self->{"C_CFLAG"} |= (PARENB|PARODD);
 	}
 	elsif ( $_[0] eq "even" ) {
-	    $self->{"C_IFLAG"} |= INPCK;
+	    $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
 	    $self->{"C_CFLAG"} |= PARENB;
 	    $self->{"C_CFLAG"} &= ~PARODD;
 	}
@@ -818,7 +836,7 @@ sub parity {
             if ($self->{U_MSG} or $Babble) {
                 carp "Can't set parity on $self->{ALIAS}";
             }
-	    return;
+	    return undef;
         }
 	write_settings($self);
     }
@@ -854,7 +872,7 @@ sub databits {
             if ($self->{U_MSG} or $Babble) {
                 carp "Can't set databits on $self->{ALIAS}";
             }
-	    return;
+	    return undef;
         }
 	write_settings($self);
     }
@@ -879,7 +897,7 @@ sub stopbits {
             if ($self->{U_MSG} or $Babble) {
                 carp "Can't set stopbits on $self->{ALIAS}";
             }
-	    return;
+	    return undef;
         }
 	write_settings($self);
     }
@@ -1067,6 +1085,20 @@ sub stty_echoctl {
 	write_settings($self);
     }
     return ($self->{"C_LFLAG"} & ECHOCTL) ? 1 : 0;
+}
+
+# Mark parity errors with a leading "NULL" character
+sub stty_parmrk {
+    my $self = shift;
+    if (@_) {
+	if ( yes_true( shift ) ) {
+	    $self->{"C_IFLAG"} |= PARMRK;
+        } else {
+	    $self->{"C_IFLAG"} &= ~PARMRK;
+	}
+	write_settings($self);
+    }
+    return wantarray ? @binary_opt : ($self->{"C_IFLAG"} & PARMRK);
 }
 
 sub stty_istrip {
@@ -1788,10 +1820,8 @@ sub parity_enable {
     my $self = shift;
     if (@_) {
 	if ( yes_true( shift ) ) {
-	    $self->{"C_IFLAG"} |= PARMRK;
 	    $self->{"C_CFLAG"} |= PARENB;
         } else {
-	    $self->{"C_IFLAG"} &= ~PARMRK;
 	    $self->{"C_CFLAG"} &= ~PARENB;
 	}
 	write_settings($self);

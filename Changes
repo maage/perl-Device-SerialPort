@@ -5,6 +5,9 @@ Revision history for Perl extension Device::SerialPort.
 	- added RPM .spec packaging support
 	- adding debian packaging support
 	- updated version number to first stable release
+	- fixing up failure return codes in data,parity,flow functions
+	- cleaning up default settings for parmrk, istrip, etc
+	- split off stty_parmrk
 
 0.22 2003-06-18 (Kees)
 	- added a notice about 4096 read limits on some machines
