@@ -32,7 +32,7 @@ use IO::Handle;
 use Carp;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 require Exporter;
 
