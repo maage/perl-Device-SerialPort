@@ -40,19 +40,19 @@ VERSIONED="$PACKAGE-$VERSION"
 VERSIONTGZ="$PACKAGE-$VERSIONPERL"
 TGZ="$VERSIONTGZ.tar.gz"
 
-grep '\(CVS\)' Changes && {
+grep '\(CVS\)' Changes >/dev/null && {
 	echo "Update the Changes' release date"
 	exit 1
 }
-grep "rpmversion $VERSION" Device-SerialPort.spec || {
+grep "rpmversion $VERSION" Device-SerialPort.spec >/dev/null || {
 	echo "Update versions in .spec file"
 	exit 1
 }
-grep ",$VERSION," configure.ac || {
+grep ",$VERSION," configure.ac >/dev/null || {
 	echo "Update version in configure.ac file"
 	exit 1
 }
-grep -F '('"${VERSION}-" debian/changelog || {
+grep -F '('"${VERSION}-" debian/changelog >/dev/null || {
 	echo "Add version to debian/changelog file"
 	exit 1
 }
@@ -91,6 +91,9 @@ find $WWWUNPACK -type d -mtime +90 -maxdepth 1 | grep $PACKAGE | xargs --no-run-
         for i in $TEXTLIST ; do \
                 cat $WWWUNPACK/$VERSIONTGZ/$i > $i.txt; \
         done)
+
+# Build HTML docs
+/usr/bin/pod2html --cachedir=/tmp --infile=$WWWUNPACK/$VERSIONTGZ/SerialPort.pm --outfile=$WWWBASE/Device-SerialPort.html
 
 # Perform HTTP magic to spawn CPAN update
 # Perform HTTP magic to spawn sf update
