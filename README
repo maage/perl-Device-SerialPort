@@ -1,5 +1,5 @@
 Device::SerialPort
-VERSION=0.09, 25 Jan 2001
+VERSION=0.13, 2002 May 31
 
 Hello Serial Port users:
 
@@ -273,14 +273,14 @@ Don't trust it for anything important without complete testing.
 
 And watch for updates at:
 
-%%%% http://sendpage.cpoint.net/device-serialport/
+%%%% http://sendpage.org/device-serialport/
 
 or CPAN under authors/id/C/CO/COOK or Device::SerialPort
 
 Thanks,
 
 -bill
-(and now Kees Cook <cook@cpoint.net>)
+(and now Kees Cook <kees@outflux.net>)
 
 Copyright (C) 1999, Bill Birthisel, 2001,2002 Kees Cook. All rights reserved.
 This module is free software; you can redistribute it and/or modify it under

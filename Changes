@@ -83,8 +83,8 @@ Revision history for Perl extension Device::SerialPort.
 	- found a place where HANDLE was staying open
 	- corrected FD-success test (0 *is* a valid fd number)
 
-0.13 (Kees)
-	- added 'sys/modem.ph' for broke HPUX headers
+0.13 2002-05-31 (Kees)
+	- added 'sys/modem.ph' for broken HPUX headers
         - fixed *BSD tiocmget and tick counts, care of
                 joerg_wunsch@interface-systems.de
         - fixed the HPUX tioc* stuff, care of
