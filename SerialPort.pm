@@ -1926,6 +1926,29 @@ sub modemlines {
     return $result;
 }
 
+sub wait_modemlines {
+    return undef unless (@_ == 1);
+    my $self = shift;
+    return undef unless ($self->can_modemlines);
+
+    my $mstat = pack('L',shift);
+    return $self->ioctl('TIOCMIWAIT',$mstat);
+}
+
+sub intr_count {
+    return undef unless (@_ == 1);
+    my $self = shift;
+    return undef unless ($self->can_modemlines);
+
+    my $mstat = pack('L',0);
+    return $self->ioctl('TIOCGICOUNT',\$mstat);
+    my $result = unpack('L', $mstat);
+    if ($Babble) {
+        printf "result = %x\n", $result;
+    }
+    return $result;
+}
+
 sub status {
     my $self = shift;
 ####    if (@_ and $testactive) {
