@@ -44,12 +44,14 @@ require Exporter;
 @EXPORT= qw();
 @EXPORT_OK= qw();
 %EXPORT_TAGS = (STAT	=> [qw( MS_CTS_ON	MS_DSR_ON
-				MS_RING_ON	MS_RLSD_ON
-				ST_BLOCK	ST_INPUT
-				ST_OUTPUT	ST_ERROR )],
+                                MS_RING_ON	MS_RLSD_ON
+                                MS_DTR_ON   MS_RTS_ON
+                                ST_BLOCK	ST_INPUT
+                                ST_OUTPUT	ST_ERROR
+                               )],
 
-		PARAM	=> [qw( LONGsize	SHORTsize	OS_Error
-				nocarp		yes_true )]);
+                PARAM	=> [qw( LONGsize	SHORTsize	OS_Error
+                                nocarp		yes_true )]);
 
 Exporter::export_ok_tags('STAT', 'PARAM');
 
@@ -60,85 +62,62 @@ XSLoader::load('Device::SerialPort', $VERSION);
 
 #### Package variable declarations ####
 
-use vars qw($bitset $bitclear $rtsout $dtrout $getstat $incount $outcount
-	    $txdone $dtrset $dtrclear $termioxflow $tcgetx $tcsetx
+#use vars qw($bitset $bitclear $rtsout $dtrout $getstat $incount $outcount
+#	    $txdone $dtrset $dtrclear $termioxflow $tcgetx $tcsetx
+#            $ms_per_tick);
+use vars qw($IOCTL_VALUE_RTS $IOCTL_VALUE_DTR $IOCTL_VALUE_TERMIOXFLOW 
             $ms_per_tick);
 
 # Load all the system bits we need
 my $bits=Device::SerialPort::Bits::get_hash();
 my $ms_per_tick=undef;
 
-$bitset = defined($bits->{'TIOCMBIS'}) ? $bits->{'TIOCMBIS'} : 0;
-$bitclear = defined($bits->{'TIOCMBIC'}) ? $bits->{'TIOCMBIC'} : 0;
-$getstat = defined($bits->{'TIOCMGET'}) ? $bits->{'TIOCMGET'} : 0;
-$incount = defined($bits->{'TIOCINQ'}) ? $bits->{'TIOCINQ'} : 0;
-$outcount = defined($bits->{'TIOCOUTQ'}) ? $bits->{'TIOCOUTQ'} : 0;
-$txdone = defined($bits->{'TIOCSERGETLSR'}) ? $bits->{'TIOCSERGETLSR'} : 0;
-$dtrset = defined($bits->{'TIOCSDTR'}) ? $bits->{'TIOCSDTR'} : 0;
-$dtrclear = defined($bits->{'TIOCCDTR'}) ? $bits->{'TIOCCDTR'} : 0;
-$rtsout = pack('L', defined($bits->{'TIOCM_RTS'}) ? $bits->{'TIOCM_RTS'} : 0);
-$dtrout = pack('L', defined($bits->{'TIOCM_DTR'}) ? $bits->{'TIOCM_DTR'} : 0);
-$termioxflow = defined($bits->{'CTSXON'}) ? ($bits->{'CTSXON'} | $bits->{'RTSXOFF'}) : 0;
-$tcgetx = defined($bits->{'TCGETX'}) ? $bits->{'TCGETX'} : 0;
-$tcsetx = defined($bits->{'TCSETX'}) ? $bits->{'TCSETX'} : 0;
+# ioctl codes
+#$bitset = defined($bits->{'TIOCMBIS'}) ? $bits->{'TIOCMBIS'} : 0;
+#$bitclear = defined($bits->{'TIOCMBIC'}) ? $bits->{'TIOCMBIC'} : 0;
+#$getstat = defined($bits->{'TIOCMGET'}) ? $bits->{'TIOCMGET'} : 0;
+#$incount = defined($bits->{'TIOCINQ'}) ? $bits->{'TIOCINQ'} : 0;
+#$outcount = defined($bits->{'TIOCOUTQ'}) ? $bits->{'TIOCOUTQ'} : 0;
+#$txdone = defined($bits->{'TIOCSERGETLSR'}) ? $bits->{'TIOCSERGETLSR'} : 0;
+#$dtrset = defined($bits->{'TIOCSDTR'}) ? $bits->{'TIOCSDTR'} : 0;
+#$dtrclear = defined($bits->{'TIOCCDTR'}) ? $bits->{'TIOCCDTR'} : 0;
+#$tcgetx = defined($bits->{'TCGETX'}) ? $bits->{'TCGETX'} : 0;
+#$tcsetx = defined($bits->{'TCSETX'}) ? $bits->{'TCSETX'} : 0;
+
+# ioctl values
+$IOCTL_VALUE_RTS = pack('L', $bits->{'TIOCM_RTS'} || 0);
+$IOCTL_VALUE_DTR = pack('L', $bits->{'TIOCM_DTR'} || 0);
+$IOCTL_VALUE_TERMIOXFLOW = (($bits->{'CTSXON'}||0) | ($bits->{'RTSXOFF'}||0));
 
 # non-POSIX constants commonly defined in termios.ph
-sub CRTSCTS {
-    return 0 unless (defined $bits->{'CRTSCTS'});
-    return $bits->{'CRTSCTS'};
-}
+sub CRTSCTS { return $bits->{'CRTSCTS'} || 0; }
 
-sub OCRNL {
-    return 0 unless (defined $bits->{'OCRNL'});
-    return $bits->{'OCRNL'};
-}
+sub OCRNL { return $bits->{'OCRNL'} || 0; }
 
-sub ONLCR {
-    return 0 unless (defined $bits->{'ONLCR'});
-    return $bits->{'ONLCR'};
-}
+sub ONLCR { return $bits->{'ONLCR'} || 0; }
 
-sub ECHOKE {
-    return 0 unless (defined $bits->{'ECHOKE'});
-    return $bits->{'ECHOKE'};
-}
+sub ECHOKE { return $bits->{'ECHOKE'} || 0; }
 
-sub ECHOCTL {
-    return 0 unless (defined $bits->{'ECHOCTL'});
-    return $bits->{'ECHOCTL'};
-}
+sub ECHOCTL { return $bits->{'ECHOCTL'} || 0; }
 
-sub TIOCM_LE {
-    if (defined $bits->{'TIOCSER_TEMT'}) { return $bits->{'TIOCSER_TEMT'}; }
-    if (defined $bits->{'TIOCM_LE'}) { return $bits->{'TIOCM_LE'}; }
-    0;
-}
+sub TIOCM_LE { return $bits->{'TIOCSER_TEMT'} || $bits->{'TIOCM_LE'} || 0; }
 
 ## Next 4 use Win32 names for compatibility
 
-sub MS_RLSD_ON {
-    if (defined $bits->{'TIOCM_CAR'}) { return $bits->{'TIOCM_CAR'}; }
-    if (defined $bits->{'TIOCM_CD'}) { return $bits->{'TIOCM_CD'}; }
-    0;
+sub MS_RLSD_ON { return $bits->{'TIOCM_CAR'} || $bits->{'TIOCM_CD'} || 0;
 }
 
-sub MS_RING_ON {
-    if (defined $bits->{'TIOCM_RNG'}) { return $bits->{'TIOCM_RNG'}; }
-    if (defined $bits->{'TIOCM_RI'}) { return $bits->{'TIOCM_RI'}; }
-    0;
-}
+sub MS_RING_ON { return $bits->{'TIOCM_RNG'} || $bits->{'TIOCM_RI'} || 0; }
 
-sub MS_CTS_ON {
-    return 0 unless (defined $bits->{'TIOCM_CTS'});
-    return $bits->{'TIOCM_CTS'};
-}
+sub MS_CTS_ON { return $bits->{'TIOCM_CTS'} || 0; }
 
-sub MS_DSR_ON {
-    return 0 unless (defined $bits->{'TIOCM_DSR'});
-    return $bits->{'TIOCM_DSR'};
-}
+sub MS_DSR_ON { return $bits->{'TIOCM_DSR'} || 0; }
 
+# For POSIX completeness
+sub MS_RTS_ON { return $bits->{'TIOCM_RTS'} || 0; }
+sub MS_DTR_ON { return $bits->{'TIOCM_DTR'} || 0; }
 
+# "status"
 sub ST_BLOCK	{0}	# status offsets for caller
 sub ST_INPUT	{1}
 sub ST_OUTPUT	{2}
@@ -161,11 +140,11 @@ my %validate =	(
 		CFG_3		=> "cfg_param_3",
 		);
 
-# Linux-specific Baud-Rates
-sub B57600  { 0010001 }
-sub B115200 { 0010002 }
-sub B230400 { 0010003 }
-sub B460800 { 0010004 }
+## Linux-specific Baud-Rates
+#sub B57600  { 0010001 }
+#sub B115200 { 0010002 }
+#sub B230400 { 0010003 }
+#sub B460800 { 0010004 }
 
 my @termios_fields = (
 		     "C_CFLAG",
@@ -190,29 +169,19 @@ my %c_cc_fields = (
 		   VTIME    => &POSIX::VTIME,
 		   );
 
-my %bauds = (
-	     0        => B0,
-	     50       => B50,
-	     75       => B75,
-	     110      => B110,
-	     134      => B134,
-	     150      => B150,
-	     200      => B200,
-	     300      => B300,
-	     600      => B600,
-	     1200     => B1200,
-	     1800     => B1800,
-	     2400     => B2400,
-	     4800     => B4800,
-	     9600     => B9600,
-	     19200    => B19200,
-	     38400    => B38400,
-	     # These are Linux-specific
-	     57600    => B57600,
-	     115200   => B115200,
-	     230400   => B230400,
-	     460800   => B460800,
-	     );
+my @baudrates = qw(
+    0 50 75 110 134 150 200 300 600
+    1200 1800 2400 4800 9600 19200 38400 57600
+    115200 230400 460800 500000 576000 921600 1000000
+    1152000 2000000 2500000 3000000 3500000 4000000
+);
+
+# Build list of "valid" system baudrates
+my %bauds;
+foreach my $baud (@baudrates) {
+    my $baudvar="B$baud";
+    $bauds{$baud}=$bits->{$baudvar} if (defined($bits->{$baudvar}));
+}
 
 my $Babble = 0;
 my $testactive = 0;	# test mode active
@@ -257,7 +226,7 @@ sub init_ms_per_tick
 			$from_posix = POSIX::sysconf($bits->{'_SC_CLK_TCK'});
 			last;
 		}
-		$errors.="$@\n";
+		$errors.="_SC_CLK_TCK not found during compilation\n";
 
 		# According to POSIX, "CLK_TCK" is obsolete now.  See
 		# "man 2 times" and the POSIX-1996 standard
@@ -268,7 +237,7 @@ sub init_ms_per_tick
 		last;
 	}
 	if (!defined($from_posix) || $from_posix == 0) {
-		die "Cannot find a useful value for _SC_CLK_TCK!\n$errors";
+		die "Cannot find a useful value for _SC_CLK_TCK:\n$errors";
 	}
 	$ms_per_tick = 1000.0 / $from_posix;
 }
@@ -291,17 +260,17 @@ sub LONGsize { 0xffffffff; }	# mostly for AltPort test
 
 sub OS_Error { print "Device::SerialPort OS_Error\n"; }
 
-    # test*.pl only - suppresses default messages
+# test*.pl only - suppresses default messages
 sub set_test_mode_active {
     return unless (@_ == 2);
     $testactive = $_[1];     # allow "off"
     my @fields = @termios_fields;
     my $item;
     foreach $item (keys %c_cc_fields) {
-	push @fields, "C_$item";
+        push @fields, "C_$item";
     }
     foreach $item (keys %validate) {
-	push @fields, "$item";
+        push @fields, "$item";
     }
     return @fields;
 }
@@ -329,38 +298,32 @@ sub new {
     $self->{NAME}     = $nameOrConf;
 
 
-
-                                # bbw change: 03/10/99
-                                #  - Add quiet option so we can do a 'test'
-                                #    new (print no error if fail)
-                                # 
+    # bbw change: 03/10/99
+    #  - Add quiet option so we can do a 'test'
+    #    new (print no error if fail)
+    # 
     my $quiet = shift;
-
-    unless ($quiet or ($bitset && $bitclear && $rtsout &&
-	    (($dtrset && $dtrclear) || $dtrout)) ) {
-       nocarp or warn "disabling ioctl methods - constants not found\n";
-    }
 
     my $lockfile = shift;
     if ($lockfile) {
         $self->{LOCK} = $lockfile;
-	my $lockf = POSIX::open($self->{LOCK}, 
+        my $lockf = POSIX::open($self->{LOCK}, 
 				    &POSIX::O_WRONLY |
 				    &POSIX::O_CREAT |
 				    &POSIX::O_NOCTTY |
 				    &POSIX::O_EXCL);
-	unless (defined $lockf) {
+        unless (defined $lockf) {
             unless ($quiet) {
                 nocarp or carp "can't open lockfile: $self->{LOCK}\n"; 
             }
             return 0 if ($quiet);
-	    return;
-	}
-	my $pid = "$$\n";
-	$ok = POSIX::write($lockf, $pid, length $pid);
-	my $ok2 = POSIX::close($lockf);
-	return unless ($ok && (defined $ok2));
-	sleep 2;	# wild guess for Version 0.05
+            return;
+        }
+        my $pid = "$$\n";
+        $ok = POSIX::write($lockf, $pid, length $pid);
+        my $ok2 = POSIX::close($lockf);
+        return unless ($ok && (defined $ok2));
+        sleep 2;	# wild guess for Version 0.05
     }
     else {
         $self->{LOCK} = "";
@@ -385,7 +348,7 @@ sub new {
             $self->{LOCK} = "";
         }
         return 0 if ($quiet);
-	return undef;
+        return undef;
     }
 
     $self->{TERMIOS} = POSIX::Termios->new();
@@ -413,15 +376,13 @@ sub new {
     # build termiox flag anyway
     $self->{'TERMIOX'} = 0;
 
-    foreach $item (keys %c_cc_fields) {
-	$self->{"_$item"} = $self->{TERMIOS}->getcc($c_cc_fields{$item});
-    }
-
     # copy the original values into "current" values
     foreach $item (keys %c_cc_fields) {
-	$self->{"C_$item"} = $self->{"_$item"};
+        $self->{"_$item"} = $self->{TERMIOS}->getcc($c_cc_fields{$item});
     }
-
+    foreach $item (keys %c_cc_fields) {
+        $self->{"C_$item"} = $self->{"_$item"};
+    }
     $self->{"C_CFLAG"} = $self->{"_CFLAG"};
     $self->{"C_IFLAG"} = $self->{"_IFLAG"};
     $self->{"C_ISPEED"} = $self->{"_ISPEED"};
@@ -433,6 +394,10 @@ sub new {
     $self->{"C_IFLAG"} &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
     $self->{"C_OFLAG"} &= ~OPOST;
     $self->{"C_LFLAG"} &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
+
+    # 9600 baud
+    $self->{"C_OSPEED"} = $bauds{"9600"};
+    $self->{"C_ISPEED"} = $bauds{"9600"};
 
     # 8data bits
     $self->{"C_CFLAG"} &= ~CSIZE;
@@ -449,7 +414,6 @@ sub new {
     &write_settings($self);
 
     $self->{ALIAS} = $self->{NAME};	# so "\\.\+++" can be changed
-##    print "opening $self->{NAME}\n"; ## DEBUG ##
 
     # "private" data
     $self->{"_DEBUG"}    	= 0;
@@ -482,7 +446,13 @@ sub new {
 
     bless ($self, $class);
 
-#	These might be a good idea
+    #unless ($quiet or ($bitset && $bitclear && $rtsout &&
+	#    (($dtrset && $dtrclear) || $dtrout)) ) {
+    unless ($self->can_ioctl()) {
+       nocarp or warn "disabling ioctl methods - system constants not found\n";
+    }
+
+#	These might be a good idea (but we'll need to change the tests)
 #    $self->read_char_time(0); 	  # no time
 #    $self->read_const_time(100); # 10th of a second
 
@@ -503,7 +473,7 @@ sub write_settings {
     $self->{TERMIOS}->setospeed($self->{"C_OSPEED"});
 
     foreach $item (keys %c_cc_fields) {
-	$self->{TERMIOS}->setcc($c_cc_fields{$item}, $self->{"C_$item"});
+        $self->{TERMIOS}->setcc($c_cc_fields{$item}, $self->{"C_$item"});
     }
 
     # setattr returns undef on failure
@@ -514,7 +484,7 @@ sub write_settings {
     }
 
     if (!$result) {
-	carp "Failed to set termios settings\n";
+        carp "Failed to set termios settings\n";
     }
    
     return $result; 
@@ -709,48 +679,81 @@ sub binary			{ return 1; }
 sub reset_error			{ return 0; } # for compatibility
 
 sub can_ioctl {
-    return 0 unless ($bitset && $bitclear && $rtsout && 
-	    (($dtrset && $dtrclear) || $dtrout));
-    return 1;
+    if (defined($bits->{'TIOCMBIS'}) &&         # Turn on
+        defined($bits->{'TIOCMBIC'}) &&         # Turn off
+        defined($bits->{'TIOCM_RTS'}) &&        # RTS value
+        ( ( defined($bits->{'TIOCSDTR'}) &&     # DTR ability/value
+            defined($bits-{'TIOCCDTR'}) ) ||
+          defined($bits->{'TIOCM_DTR'})
+        )
+       ) {
+        return 1;
+    }
+    return 0;
+
+    #return 0 unless ($bitset && $bitclear && $rtsout && 
+	#    (($dtrset && $dtrclear) || $dtrout));
+    #return 1;
+}
+
+sub can_modemlines {
+    return 1 if (defined($bits->{'TIOCMGET'}));
+    return 0;
 }
 
 sub can_status {
-    return 0 unless ($incount && $outcount);
-    return 1;
+    return 1 if (defined($bits->{'TIOCINQ'}) &&
+                 defined($bits->{'TIOCOUTQ'}));
+    return 0;
+    #return 0 unless ($incount && $outcount);
+    #return 1;
 }
 
 sub can_write_done {
-    return 0 unless ($txdone && defined($bits->{'TIOCM_LE'}) && $outcount);
-    return 1;
+    my ($self)=@_;
+    return 1 if ($self->can_status &&
+                 defined($bits->{'TIOCSERGETLSR'}) &&
+                 TIOCM_LE);
+    return 0;
 }
 
 # can we control the rts line?
 sub can_rts {
-    return 0 unless($bitset && $bitclear && $rtsout && !($dtrset && $dtrclear));
-    return 1;
+    if (defined($bits->{'TIOCMBIS'}) &&
+        defined($bits->{'TIOCMBIC'}) &&
+        defined($bits->{'TIOCM_RTS'})) {
+            return 1;
+    }
+    return 0;
+
+    # why are we testing for _lack_ of dtrset/clear?  can BSD NOT control RTS?
+    #return 0 unless($bitset && $bitclear && $rtsout && !($dtrset && $dtrclear));
+    #return 1;
 }
 
 sub termiox {
     my $self = shift;
-    return unless ($termioxflow);
+    return unless ($IOCTL_VALUE_TERMIOXFLOW);
     my $on = shift;
     my $rc;
 
-    $self->{'TERMIOX'}=$on ? $termioxflow : 0;
+    $self->{'TERMIOX'}=$on ? $IOCTL_VALUE_TERMIOXFLOW : 0;
 
     my $flags=pack('SSSS',0,0,0,0);
-    if (!($rc=ioctl($self->{HANDLE}, $tcgetx, $flags))) {
-	warn "TCGETX ioctl: $!\n";
-    }
+    return undef unless $self->ioctl('TCGETX', \$flags);
+    #if (!($rc=ioctl($self->{HANDLE}, $tcgetx, $flags))) {
+	#warn "TCGETX($tcgetx) ioctl: $!\n";
+    #}
 
     my @vals=unpack('SSSS',$flags);
-    $vals[0]= $on ? $termioxflow : 0;
+    $vals[0]= $on ? $IOCTL_VALUE_TERMIOXFLOW : 0;
     $flags=pack('SSSS',@vals);
 
-    if (!($rc=ioctl($self->{HANDLE}, $tcsetx, $flags))) {
-	warn "TCSETX($on) ioctl: $!\n";
-    }
-    return $rc;
+    return undef unless $self->ioctl('TCSETX', \$flags);
+    #if (!($rc=ioctl($self->{HANDLE}, $tcsetx, $flags))) {
+	#warn "TCSETX($tcsetx) ioctl: $!\n";
+    #}
+    return 1;
 }
   
 sub handshake {
@@ -759,17 +762,17 @@ sub handshake {
     if (@_) {
 	if ( $_[0] eq "none" ) {
 	    $self->{"C_IFLAG"} &= ~(IXON | IXOFF);
-	    $self->termiox(0) if ($termioxflow);
+	    $self->termiox(0) if ($IOCTL_VALUE_TERMIOXFLOW);
 	    $self->{"C_CFLAG"} &= ~CRTSCTS;
 	}
 	elsif ( $_[0] eq "xoff" ) {
 	    $self->{"C_IFLAG"} |= (IXON | IXOFF);
-	    $self->termiox(0) if ($termioxflow);
+	    $self->termiox(0) if ($IOCTL_VALUE_TERMIOXFLOW);
 	    $self->{"C_CFLAG"} &= ~CRTSCTS;
 	}
 	elsif ( $_[0] eq "rts" ) {
 	    $self->{"C_IFLAG"} &= ~(IXON | IXOFF);
-	    $self->termiox(1) if ($termioxflow);
+	    $self->termiox(1) if ($IOCTL_VALUE_TERMIOXFLOW);
 	    $self->{"C_CFLAG"} |= CRTSCTS;
 	}
         else {
@@ -783,8 +786,8 @@ sub handshake {
     if (wantarray) { return ("none", "xoff", "rts"); }
     my $mask = (IXON|IXOFF);
     return "xoff" if ($mask == ($self->{"C_IFLAG"} & $mask));
-    if ($termioxflow) {
-	return "rts" if ($self->{'TERMIOX'} & $termioxflow);
+    if ($IOCTL_VALUE_TERMIOXFLOW) {
+	return "rts" if ($self->{'TERMIOX'} & $IOCTL_VALUE_TERMIOXFLOW);
     } else {
     	return "rts" if ($self->{"C_CFLAG"} & CRTSCTS);
     }
@@ -792,27 +795,27 @@ sub handshake {
 }
 
 sub baudrate {
-    my $self = shift;
+    my ($self,$rate) = @_;
     my $item = 0;
 
-    if (@_) {
-        if (defined $bauds{$_[0]}) {
-            $self->{"C_OSPEED"} = $bauds{$_[0]};
-            $self->{"C_ISPEED"} = $bauds{$_[0]};
+    if (defined($rate)) {
+        if (defined $bauds{$rate}) {
+            $self->{"C_OSPEED"} = $bauds{$rate};
+            $self->{"C_ISPEED"} = $bauds{$rate};
             write_settings($self);
         }
         else {
             if ($self->{U_MSG} or $Babble) {
-                carp "Can't set baudrate on $self->{ALIAS}";
+                carp "Can't set baudrate ($rate) on $self->{ALIAS}";
             }
-	    return undef;
+            return 0;
         }
     }
     if (wantarray) { return (keys %bauds); }
     foreach $item (keys %bauds) {
-	return $item if ($bauds{$item} == $self->{"C_OSPEED"});
+        return $item if ($bauds{$item} == $self->{"C_OSPEED"});
     }
-    return undef;
+    return 0;
 }
 
 sub parity {
@@ -1831,34 +1834,47 @@ sub parity_enable {
 
 sub write_done {
     return unless (@_ == 2);
-    return unless ($txdone && defined($bits->{'TIOCM_LE'}) && $outcount);
     my $self = shift;
+    return unless ($self->can_write_done);
+    my $rc;
     my $wait = yes_true ( shift );
     $self->write_drain if ($wait);
+
     my $mstat = " ";
     my $result;
     for (;;) {
-        ioctl($self->{HANDLE}, $outcount, $mstat) || return;
+        return unless $self->ioctl('TIOCOUTQ',\$mstat);
+        #if (!($rc=ioctl($self->{HANDLE}, $outcount, $mstat))) {
+        #    warn "TIOCOUTQ($outcount) ioctl: $!\n";
+        #    return;
+        #}
         $result = unpack('L', $mstat);
-	return (0, 0) if ($result);	# characters pending
-	ioctl($self->{HANDLE}, $txdone, $mstat) || return;
-	$result = (unpack('L', $mstat) & $bits->{'TIOCM_LE'});
-	last unless ($wait);
-	last if ($result);		# shift register empty
-	select (undef, undef, undef, 0.02);
+        return (0, 0) if ($result);	# characters pending
+
+        return unless $self->ioctl('TIOCSERGETLSR',\$mstat);
+        #if (!($rc=ioctl($self->{HANDLE}, $txdone, $mstat))) {
+        #    warn "TIOCSERGETLSR($txdone) ioctl: $!\n";
+        #    return;
+        #}
+        $result = (unpack('L', $mstat) & TIOCM_LE);
+        last unless ($wait);
+        last if ($result);		# shift register empty
+        select (undef, undef, undef, 0.02);
     }
     return $result ? (1, 0) : (0, 0);
 }
 
 sub modemlines {
     return undef unless (@_ == 1);
-    return undef unless ($getstat);
     my $self = shift;
+    return undef unless ($self->can_modemlines);
+
     my $mstat = pack('L',0);
-    if (!ioctl($self->{HANDLE}, $getstat, $mstat)) {
-	warn "modemlines ioctl failed: $!\n";
-	return undef;
-    }
+    return undef unless $self->ioctl('TIOCMGET',\$mstat);
+    #if (!ioctl($self->{HANDLE}, $getstat, $mstat)) {
+    #    warn "TIOCMGET($getstat) ioctl: $!\n";
+    #    return undef;
+    #}
     my $result = unpack('L', $mstat);
     if ($Babble) {
         printf "result = %x\n", $result;
@@ -1876,13 +1892,23 @@ sub status {
 ####        $self->{"_LATCH"} |= shift;
 ####    }
     return if (@_);
-    return unless ($incount && $outcount);
+    return unless ($self->can_status);
     my @stat = (0, 0, 0, 0);
     my $mstat = " ";
 
-    ioctl($self->{HANDLE}, $incount, $mstat) || return;
+    return unless $self->ioctl('TIOCINQ', \$mstat);
+    #if (!(ioctl($self->{HANDLE}, $incount, $mstat))) {
+    #    warn "TIOCINQ($incount) ioctl: $!\n";
+    #    return;
+    #}
+
     $stat[ST_INPUT] = unpack('L', $mstat);
-    ioctl($self->{HANDLE}, $outcount, $mstat) || return;
+    return unless $self->ioctl('TIOCOUTQ', \$mstat);
+    #if (!(ioctl($self->{HANDLE}, $outcount, $mstat))) {
+    #    warn "TIOCOUTQ($outcount) ioctl: $!\n";
+    #    return;
+    #}
+
     $stat[ST_OUTPUT] = unpack('L', $mstat);
 
     if ( $Babble or $self->{"_DEBUG"} ) {
@@ -1897,18 +1923,24 @@ sub status {
 sub dtr_active {
     return unless (@_ == 2);
     my $self = shift;
-    return unless $self->can_ioctl();
+    return unless $self->can_dtrdsr();
     my $on = yes_true( shift );
     my $rc;
 
     # if we have set DTR and clear DTR, we should use it (OpenBSD)
-    if ($dtrset && $dtrclear) {
+    my $value=0;
+    if (defined($bits->{'TIOCSDTR'}) &&
+        defined($bits->{'TIOCCDTR'})) {
 #        warn "SDTR/CDTR\n";
-	$rc=ioctl($self->{HANDLE}, $on ? $dtrset : $dtrclear, 0);
+        $value=0;
+        $rc=$self->ioctl($on ? 'TIOCSDTR' : 'TIOCCDTR', \$value);
+        #$rc=ioctl($self->{HANDLE}, $on ? $dtrset : $dtrclear, 0);
     }
     else {
 #        warn "BIS/BIC\n";
-        $rc=ioctl($self->{HANDLE}, $on ? $bitset : $bitclear, $dtrout);
+        $value=$IOCTL_VALUE_DTR;
+        $rc=$self->ioctl($on ? 'TIOCMBIS' : 'TIOCMBIC', \$value);
+        #$rc=ioctl($self->{HANDLE}, $on ? $bitset : $bitclear, $dtrout);
     }
     warn "dtr_active($on) ioctl: $!\n"    if (!$rc);
 
@@ -1924,7 +1956,9 @@ sub rts_active {
     return unless ($self->can_rts());
     my $on = yes_true( shift );
     # returns ioctl result
-    my $rc=ioctl($self->{HANDLE}, $on ? $bitset : $bitclear, $rtsout);
+    my $value=$IOCTL_VALUE_RTS;
+    my $rc=$self->ioctl($on ? 'TIOCMBIS' : 'TIOCMBIC', \$value);
+    #my $rc=ioctl($self->{HANDLE}, $on ? $bitset : $bitclear, $rtsout);
     warn "rts_active($on) ioctl: $!\n" if (!$rc);
     return $rc; 
 }
@@ -2060,6 +2094,29 @@ sub close {
     $self->{ALIAS} = undef;
     return unless ($ok);
     1;
+}
+
+sub ioctl
+{
+    my ($self,$code,$ref) = @_;
+    return undef unless (defined $self->{NAME});
+
+    if ($Babble) {
+        carp "ioctl $code($bits->{$code}) $ref";
+    }
+
+    my $magic;
+    if (!defined($magic = $bits->{$code})) {
+        carp "cannot ioctl '$code': no system value found\n";
+        return undef;
+    }
+
+    if (!ioctl($self->{HANDLE},$magic,$$ref)) {
+        carp "$code($magic) ioctl failed: $!";
+        return undef;
+    }
+
+    return 1;
 }
 
 ##### tied FileHandle support
@@ -2279,8 +2336,6 @@ sub FILENO {
 }
  
 1;  # so the require or use succeeds
-
-# Autoload methods go after =cut, and are processed by the autosplit program.
 
 __END__
 
@@ -2909,14 +2964,20 @@ Utility subroutines and constants for parameter setting and test:
 
 =item :STAT
 
-The Constants named BM_* and CE_* are omitted. But the MS_*
+The Constants named BM_* and CE_* are omitted. But the modem status (MS_*)
 Constants are defined for possible use with B<modemlines>. They are
 assigned to corresponding functions, but the bit position will be
 different from that on Win32.
 
 Which incoming bits are active:
 
-	MS_CTS_ON	MS_DSR_ON	MS_RING_ON	MS_RLSD_ON
+	MS_CTS_ON    - Clear to send
+    MS_DSR_ON    - Data set ready
+    MS_RING_ON   - Ring indicator  
+    MS_RLSD_ON   - Carrier detected
+    MS_RTS_ON    - Request to send (might not exist on Win32)
+    MS_DTR_ON    - Data terminal ready (might not exist on Win32)
+
 
 Offsets into the array returned by B<status:>
 
@@ -3223,9 +3284,11 @@ perltoot - Tom Christiansen's Object-Oriented Tutorial
 =head1 COPYRIGHT
 
  Copyright (C) 1999, Bill Birthisel. All rights reserved.
- Copyright (C) 2000-2003, Kees Cook.  All rights reserved.
+ Copyright (C) 2000-2004, Kees Cook.  All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =cut
+
+# /* vi:set ai ts=4 sw=4 expandtab: */

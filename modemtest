@@ -24,18 +24,67 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # http://www.gnu.org/copyleft/gpl.html
 
-use Device::SerialPort;
+use Device::SerialPort qw (:STAT);
 use strict;
 
-print "Module loaded\n";
+=head1 NAME
+
+modemtest - Tool to examining your modem through Perl's Device::SerialPort
+
+=head1 SYNOPSIS
+
+modemtest [DEVICE [BAUD [DATABITS [PARITY [STOPBITS [FLOW]]]]]]
+
+ DEVICE    Device to use as a serial port (default: "/dev/modem")
+ BAUD      Serial speed to use            (default: 9600)
+ DATABITS  Number of databits to use      (default: 8)
+ PARITY    Type of parity to use          (default: "none")
+ STOPBITS  Number of stop bits to use     (default: 1)
+ FLOW      Kind of flow control to use    (default: "none")
+
+=head1 DESCRIPTION
+
+Some systems, serial ports, and modem behave in strange ways.  To test
+the capabilities of Perl's Device::SerialPort, this tool queries the
+system settings for the given DEVICE, and attempts to set up the port
+and send the initialization string "ATE1" to the modem, reporting the
+results seen.
+
+=head1 SEE ALSO
+
+L<Device::SerialPort(3)>
+
+L<perl(1)>
+
+=head1 AUTHOR
+
+Kees Cook <kees@outflux.net>.
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2000-2004 by Kees Cook <kees@outflux.net>.
+
+This program is free software; you may redistribute it and/or modify
+it under the same terms ans Perl itself.
+
+=cut
+
+printf "Device::SerialPort v%d.%d.%d loaded.\n",
+       ("${Device::SerialPort::VERSION}000000"=~/^(\d+)\.(\d{3})(\d{3})/);
 
 # your serial port.
-my ($device,$baud,$databits,$parity,$stopbits)=@ARGV;
-$device   ||= "/dev/modem";
-$baud	  ||= "9600";
-$databits ||= "8";
-$parity   ||= "none";
-$stopbits ||= "1";
+my ($device,$baudrate,$databits,$parity,$stopbits,$handshake)=@ARGV;
+$device    ||= "/dev/modem";
+$baudrate  ||= "9600";
+$databits  ||= "8";
+$parity    ||= "none";
+$stopbits  ||= "1";
+$handshake ||= "none";
+
+if ($device eq "-h" ||
+    $device eq "--help") {
+    die "Usage: $0 [DEVICE [BAUD [DATABITS [PARITY [STOPBITS [FLOW]]]]]]\n";
+}
 
 my $port=new Device::SerialPort($device) || die "new($device): $!\n";
 print "Port '$device' open\n";
@@ -82,23 +131,38 @@ grep(print("\t$_\n"),sort { $b <=> $a } @stopbits);
 $stopbits=$port->stopbits($stopbits);
 print "Got stopbits: $stopbits\n";
 
+linestatus();
+print "\n";
+
 # Flip on DTR and RTS
 my $dtr=$port->dtr_active(1) ? "okay" : "failed";
 my $rts=$port->rts_active(1) ? "okay" : "failed";
 print "Port DTR ($dtr) and RTS ($rts) activated\n";
+linestatus();
+print "\n";
 
 $rts=$port->rts_active(0) ? "okay" : "failed";
 print "Flipped RTS to off ($rts) (pausing for 5 seconds)\n";
+linestatus();
+print "\n";
 sleep 5;
+
 $rts=$port->rts_active(1) ? "okay" : "failed";
 print "Flipped RTS to on ($rts)\n";
+linestatus();
+print "\n";
 
 # Flip OFF dtr
 $dtr=$port->dtr_active(0) ? "okay" : "failed";
 print "Flipped DTR to off ($dtr) (pausing for 5 seconds)\n";
+linestatus();
+print "\n";
 sleep 5;
+
 $dtr=$port->dtr_active(1) ? "okay" : "failed";
 print "Flipped DTR to on ($dtr)\n";
+linestatus();
+print "\n";
 
 # Just in case: reset our timing and buffers
 $port->lookclear();
@@ -109,13 +173,16 @@ $port->read_char_time(5);
 my ($count,$str,$got,$cnt);
 readchunk();
 
-# Write an INIT to the modem
+# Write some AT commands to the modem
 ($count)=$port->write("ATE1\r");
 print "written: $count\n";
 
 # Read a few chunks
 readchunk();
 readchunk();
+
+print "\n";
+linestatus();
 
 # close the port
 undef $port;
@@ -133,5 +200,23 @@ sub readchunk
 		$cnt+=$count;
 	}
 	print "read: $cnt\n";
+    $str=~s/([^\040-\176])/sprintf("{0x%02X}",ord($1))/ge;
 	print "saw ->$str<-\n";
 }
+
+sub linestatus
+{
+    my $status = $port->modemlines;
+    printf("Modem status = 0x%04X (DTR=%s CTS=%s RTS=%s DSR=%s RNG=%s CD=%s)\n",
+        $status,
+        ($status & MS_DTR_ON) ? "ON " : "off",
+        ($status & MS_CTS_ON) ? "ON " : "off",
+        ($status & MS_RTS_ON) ? "ON " : "off",
+        ($status & MS_DSR_ON) ? "ON " : "off",
+        ($status & MS_RING_ON) ? "ON " : "off",
+        ($status & MS_RLSD_ON) ? "ON " : "off",
+    );
+
+}
+
+# /* vi:set ai ts=4 sw=4 expandtab: */

@@ -112,7 +112,9 @@ print "into '$file'!\n";
 my %mm_args=(
     'NAME'          => 'Device::SerialPort',
     'VERSION_FROM'  => 'SerialPort.pm', # finds $VERSION
-    'PREREQ_PM'     => {}, # e.g., Module::Name => 1.1
+    'PREREQ_PM'     => {
+				'Test::More' => 0,
+			}, # e.g., Module::Name => 1.1
     'ABSTRACT_FROM' => 'SerialPort.pm', # retrieve abstract from module
     'AUTHOR'        => 'Kees Cook <kees@outflux.net>',
     'LIBS'          => [''], # e.g., '-lm'

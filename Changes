@@ -8,6 +8,9 @@ Revision history for Perl extension Device::SerialPort.
 	- fixing up failure return codes in data,parity,flow functions
 	- cleaning up default settings for parmrk, istrip, etc
 	- split off stty_parmrk
+	- setting defaults of 9600, 8N1, no flow in "new"
+	- added MS_DTR_ON and MS_DSR_ON
+	- clearly documenting "carrier" bit
 
 0.22 2003-06-18 (Kees)
 	- added a notice about 4096 read limits on some machines

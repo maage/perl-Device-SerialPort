@@ -2,8 +2,8 @@
 - convert to Test::More
 - split up tests so we can do non-device testing (as the default)
 
-- fix AIX hardware flow control (what wrong?)
-- fix lockfile support (how?)
+- fix AIX hardware flow control (whats wrong with it?)
+- fix lockfile support (maybe using a generic File::Lock routine?)
 
 - spread POD docs out across the module
 
