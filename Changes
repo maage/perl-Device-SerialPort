@@ -1,6 +1,6 @@
 Revision history for Perl extension Device::SerialPort.
 
-1.0.0 (CVS)
+1.0.0 2004-02-23 (Kees)
 	- fixed logic in READ tie function from Jaakko Yli-Luukko	
 	- added RPM .spec packaging support
 	- adding debian packaging support

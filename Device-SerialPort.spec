@@ -5,7 +5,10 @@
 %define pkgname Device-SerialPort
 %define summary Linux/POSIX emulation of Win32::SerialPort functions
 %define filelist %{pkgname}-%{version}-filelist
+# If you want to run the tests, make sure there is no modem on the port,
+# and change the following "0" to a "1".
 %define maketest 0
+%define testport /dev/ttyS0
 # Be sure to change both
 %define pkgversion 1
 %define rpmversion 1.0.0
@@ -33,7 +36,7 @@ POSIX-based version of the Win32::Serialport module for serial port control.
 chmod -R u+w %{_builddir}/%{namever}
 %build
 CFLAGS="$RPM_OPT_FLAGS"
-%{__perl} Makefile.PL `%{__perl} -MExtUtils::MakeMaker -e ' print qq|PREFIX=%{buildroot}%{_prefix}| if \$ExtUtils::MakeMaker::VERSION =~ /5\.9[1-6]|6\.0[0-5]/ '` TESTPORT=/dev/ttyS0
+%{__perl} Makefile.PL `%{__perl} -MExtUtils::MakeMaker -e ' print qq|PREFIX=%{buildroot}%{_prefix}| if \$ExtUtils::MakeMaker::VERSION =~ /5\.9[1-6]|6\.0[0-5]/ '` TESTPORT=%{testport}
 %{__make} 
 
 %if %maketest
@@ -65,7 +68,7 @@ find %{buildroot}%{_prefix}             \
 %{__perl} -MFile::Find -le '
 find({ wanted => \&wanted, no_chdir => 1}, "%{buildroot}");
 print "%defattr(-,root,root)";
-print "%doc  "%{docs};
+print "%doc  %{docs}";
 for my $x (sort @dirs, @files) {
 push @ret, $x unless indirs($x);
 }
