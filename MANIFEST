@@ -1,7 +1,7 @@
 Changes
 Device-SerialPort.html
 modemtest
-show-tiocm.c
+show-tiocm.c.test
 MANIFEST
 Makefile.PL
 README

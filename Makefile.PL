@@ -202,10 +202,13 @@ print "\nYou're ready to run 'make' now...\n";
 # the contents of the Makefile that is written.
 WriteMakefile(
     'NAME'	=> 'Device::SerialPort',
+    'PREREQ_PM' => {}, # e.g., Module::Name => 1.1
     'VERSION_FROM' => 'SerialPort.pm', # finds $VERSION
     'AUTHOR' => 'Kees Cook <cook@cpoint.net>',
     'ABSTRACT_FROM' => 'SerialPort.pm',
-    'SKIP'	=> [qw(tool_autosplit)],
+#    'SKIP'	=> [qw(tool_autosplit)],
+    'C' => undef,
+    'MYEXTLIB' => undef,
     'clean' => { FILES => 't/DefaultPort.pm *.cfg t/*.cfg' },
     'dist' => { COMPRESS => 'gzip -9f', SUFFIX => '.tar.gz', }
 );
