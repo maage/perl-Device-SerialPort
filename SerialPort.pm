@@ -2899,7 +2899,9 @@ reason to do this.
 The object returned by B<new> is NOT a I<Filehandle>. You will be
 disappointed if you try to use it as one.
 
-e.g. the following is WRONG!!____C<print $PortObj "some text";>
+e.g. the following is WRONG!!
+
+ print $PortObj "some text";
 
 This module uses I<POSIX termios> extensively. Raw API calls are B<very>
 unforgiving. You will certainly want to start perl with the B<-w> switch.
@@ -2909,6 +2911,44 @@ constants in hardware device drivers....not where you want to look for bugs).
 
 With all the options, this module needs a good tutorial. It doesn't
 have one yet.
+
+=head1 EXAMPLE
+
+It is recommended to always use "read(255)" due to some unexpected
+behavior with the termios under some operating systems (Linux and Solaris
+at least).  To deal with this, a routine is usually needed to read from
+the serial port until you have what you want.  This is a quick example
+of how to do that:
+
+ my $port=Device::SerialPort->new("/dev/ttyS0");
+
+ my $STALL_DEFAULT=10; # how many seconds to wait for new input
+ 
+ my $timeout=$STALL_DEFAULT;
+ 
+ $port->read_char_time(0);     # don't wait for each character
+ $port->read_const_time(1000); # 1 second per unfulfilled "read" call
+ 
+ my $chars=0;
+ my $buffer="";
+ while ($timeout>0) {
+        my ($count,$saw)=$port->read(255); # will read _up to_ 255 chars
+        if ($count > 0) {
+                $chars+=$count;
+                $buffer.=$saw;
+ 
+                # Check here to see if what we want is in the $buffer
+                # say "last" if we find it
+        }
+        else {
+                $timeout--;
+        }
+ }
+
+ if ($timeout==0) {
+        die "Waited $STALL_DEFAULT seconds and never saw what I wanted\n";
+ }
+
 
 =head1 PORTING
 
