@@ -175,8 +175,7 @@ my ($count,$str,$got,$cnt);
 readchunk();
 
 # Write some AT commands to the modem
-($count)=$port->write("ATE1\r");
-print "written: $count\n";
+writechunk("ATE1\r");
 
 # Read a few chunks
 readchunk();
