@@ -1345,7 +1345,7 @@ sub read {
     my $wanted = shift;
     my $result = "";
     my $ok     = 0;
-    return unless ($wanted > 0);
+    return (0, "") unless ($wanted > 0);
 
     my $done = 0;
     my $count_in = 0;
@@ -1378,7 +1378,7 @@ sub read_vmin {
     my $wanted = shift;
     my $result = "";
     my $ok     = 0;
-    return unless ($wanted > 0);
+    return (0, "") unless ($wanted > 0);
 
 #	This appears dangerous under Solaris
 #    if ($self->{"C_VMIN"} != $wanted) {
@@ -1398,22 +1398,20 @@ sub read_vmin {
     my $got=0;
     #my $got = POSIX::read ($self->{FD}, $result, $wanted);
 
-# added..
     if ($ready>0) {
         $got = POSIX::read ($self->{FD}, $result, $wanted);
-# end
 
-        unless (defined $got) {
-##   	    $got = -1;	## DEBUG
-	    return (0,"") if (&POSIX::EAGAIN == ($ok = POSIX::errno()));
-	    return (0,"") if (!$ready and (0 == $ok));
+        if (! defined $got) {
+            return (0,"") if (&POSIX::EAGAIN == ($ok = POSIX::errno()));
+            return (0,"") if (!$ready and (0 == $ok));
 		    # at least Solaris acts like eof() in this case
-	    carp "Error #$ok in Device::SerialPort::read";
-	    return;
+            carp "Error #$ok in Device::SerialPort::read";
+            return;
         }
-# added..
+#        elsif ($got == 0) {
+#            return;
+#        }
     }
-# end
 
     print "read_vmin=$got, ready=$ready, result=..$result..\n" if ($Babble);
     return ($got, $result);
