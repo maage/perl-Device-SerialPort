@@ -37,7 +37,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 # M.mmmrrr Major minor rev
 # Odd mmm is a devel version
 # Even mmm is a stable version
-$VERSION = 1.000_003;
+$VERSION = 1.002_000;
 
 require Exporter;
 
@@ -67,27 +67,12 @@ XSLoader::load('Device::SerialPort', $VERSION);
 
 #### Package variable declarations ####
 
-#use vars qw($bitset $bitclear $rtsout $dtrout $getstat $incount $outcount
-#	    $txdone $dtrset $dtrclear $termioxflow $tcgetx $tcsetx
-#            $ms_per_tick);
 use vars qw($IOCTL_VALUE_RTS $IOCTL_VALUE_DTR $IOCTL_VALUE_TERMIOXFLOW 
             $ms_per_tick);
 
 # Load all the system bits we need
 my $bits=Device::SerialPort::Bits::get_hash();
 my $ms_per_tick=undef;
-
-# ioctl codes
-#$bitset = defined($bits->{'TIOCMBIS'}) ? $bits->{'TIOCMBIS'} : 0;
-#$bitclear = defined($bits->{'TIOCMBIC'}) ? $bits->{'TIOCMBIC'} : 0;
-#$getstat = defined($bits->{'TIOCMGET'}) ? $bits->{'TIOCMGET'} : 0;
-#$incount = defined($bits->{'TIOCINQ'}) ? $bits->{'TIOCINQ'} : 0;
-#$outcount = defined($bits->{'TIOCOUTQ'}) ? $bits->{'TIOCOUTQ'} : 0;
-#$txdone = defined($bits->{'TIOCSERGETLSR'}) ? $bits->{'TIOCSERGETLSR'} : 0;
-#$dtrset = defined($bits->{'TIOCSDTR'}) ? $bits->{'TIOCSDTR'} : 0;
-#$dtrclear = defined($bits->{'TIOCCDTR'}) ? $bits->{'TIOCCDTR'} : 0;
-#$tcgetx = defined($bits->{'TCGETX'}) ? $bits->{'TCGETX'} : 0;
-#$tcsetx = defined($bits->{'TCSETX'}) ? $bits->{'TCSETX'} : 0;
 
 # ioctl values
 $IOCTL_VALUE_RTS = pack('L', $bits->{'TIOCM_RTS'} || 0);
@@ -150,12 +135,6 @@ my %validate =	(
 		CFG_2		=> "cfg_param_2",
 		CFG_3		=> "cfg_param_3",
 		);
-
-## Linux-specific Baud-Rates
-#sub B57600  { 0010001 }
-#sub B115200 { 0010002 }
-#sub B230400 { 0010003 }
-#sub B460800 { 0010004 }
 
 my @termios_fields = (
 		     "C_CFLAG",
@@ -487,10 +466,6 @@ sub write_settings {
         print "writing settings to $self->{ALIAS}\n";
     }
 
-    #if (!$result) {
-    #    carp "Failed to set termios settings: $!\n";
-    #}
-   
     return $result; 
 }
 
@@ -513,18 +488,18 @@ sub save {
     print CF "$self->{LOCK}\n";
 	# use lock to "open" if established
 
-        # put current values from Termios structure FIRST
+    # put current values from Termios structure FIRST
     foreach $item (@termios_fields) {
-	printf CF "$item,%d\n", $self->{"$item"};
+        printf CF "$item,%d\n", $self->{"$item"};
     }
     foreach $item (keys %c_cc_fields) {
-	printf CF "C_$item,%d\n", $self->{"C_$item"};
+        printf CF "C_$item,%d\n", $self->{"C_$item"};
     }
     
     no strict 'refs';		# for $gosub
     while (($item, $getsub) = each %validate) {
         chomp $getsub;
-	$value = scalar &$getsub($self);
+        $value = scalar &$getsub($self);
         print CF "$item,$value\n";
     }
     use strict 'refs';
@@ -569,11 +544,11 @@ sub get_start_values {
     my $item;
     my @fields = @termios_fields;
     foreach $item (keys %c_cc_fields) {
-	push @fields, "C_$item";
+        push @fields, "C_$item";
     }
     my %termios;
     foreach $item (@fields) {
-	$termios{$item} = 1;
+        $termios{$item} = 1;
     }
     my $key;
     my $value;
@@ -587,12 +562,12 @@ sub get_start_values {
 	elsif (defined $termios{$key}) {
 	    $self->{"$key"} = $value;
 	}
-        else {
+    else {
             $gosub = $validate{$key};
             unless (defined &$gosub ($self, $value)) {
     	        carp "Invalid parameter for $key=$value   "; 
     	        return;
-	    }
+            }
         }
     }
     use strict 'refs';
@@ -841,15 +816,12 @@ sub parity {
     my $self = shift;
     if (@_) {
         if ( $_[0] eq "none" ) {
-#	         $self->{"C_IFLAG"} &= ~(INPCK|ISTRIP);
             $self->{"C_CFLAG"} &= ~(PARENB|PARODD);
         }
         elsif ( $_[0] eq "odd" ) {
-#	         $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
             $self->{"C_CFLAG"} |= (PARENB|PARODD);
         }
         elsif ( $_[0] eq "even" ) {
-#	         $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
 	        $self->{"C_CFLAG"} |= PARENB;
             $self->{"C_CFLAG"} &= ~PARODD;
         }
@@ -1416,7 +1388,6 @@ sub read_vmin {
     my $ready = select($rout=$rin, $wout=undef, $eout=$ein, $tout=$tin);
 
     my $got=0;
-    #my $got = POSIX::read ($self->{FD}, $result, $wanted);
 
     if ($ready>0) {
         $got = POSIX::read ($self->{FD}, $result, $wanted);
@@ -1532,8 +1503,6 @@ sub lookfor {
     }
 
     if ($size) {
-####    my ($bbb, $iii, $ooo, $eee) = status($self);
-####	if ($iii > $size) { $size = $iii; }
 	($count_in, $string_in) = $self->read($size);
 	return unless ($count_in);
         $loc .= $string_in;
@@ -1543,107 +1512,18 @@ sub lookfor {
     }
 
     if ($loc ne "") {
-####	if ($self->{icrnl}) { $loc =~ tr/\r/\n/; }
 	my $n_char;
 	my $mpos;
-####	my $erase_is_bsdel = 0;
-####	my $nl_after_kill = "";
-####	my $clear_after_kill = 0;
-####	my $echo_ctl = 0;
 	my $lookbuf;
 	my $re_next = 0;
 	my $got_match = 0;
 	my $pat;
-####	my $lf_erase = "";
-####	my $lf_kill = "";
-####	my $lf_eof = "";
-####	my $lf_quit = "";
-####	my $lf_intr = "";
-####	my $nl_2_crnl = 0;
-####	my $cr_2_nl = 0;
-
-####	if ($self->{opost}) {
-####	    $nl_2_crnl = $self->{onlcr};
-####	    $cr_2_nl = $self->{ocrnl};
-####	}
-
-####	if ($self->{echo}) {
-####	    $erase_is_bsdel = $self->{echoe};
-####	    if ($self->{echok}) {
-####	        $nl_after_kill = $self->{onlcr} ? "\r\n" : "\n";
-####	    }
-####	    $clear_after_kill = $self->{echoke};
-####	    $echo_ctl = $self->{echoctl};
-####	}
-
-####	if ($self->{icanon}) {
-####	    $lf_erase = $self->{erase};
-####	    $lf_kill = $self->{s_kill};
-####	    $lf_eof = $self->{s_eof};
-####	}
-
-####	if ($self->{isig}) {
-####	    $lf_quit = $self->{quit};
-####	    $lf_intr = $self->{intr};
-####	}
 	
 	my @loc_char = split (//, $loc);
 	while (defined ($n_char = shift @loc_char)) {
-##	    printf STDERR "0x%x ", ord($n_char);
-####	    if ($n_char eq $lf_erase) {
-####	        if ($erase_is_bsdel && (length $self->{"_LOOK"}) ) {
-####		    $mpos = chop $self->{"_LOOK"};
-####	            $self->write($self->{bsdel});
-####	            if ($echo_ctl && (($mpos lt "@")|($mpos eq chr(127)))) {
-####	                $self->write($self->{bsdel});
-####		    }
-####		} 
-####	    }
-####	    elsif ($n_char eq $lf_kill) {
-####		$self->{"_LOOK"} = "";
-####	        $self->write($self->{clear}) if ($clear_after_kill);
-####	        $self->write($nl_after_kill);
-####	        $self->write($self->{"_PROMPT"});
-####	    }
-####	    elsif ($n_char eq $lf_intr) {
-####		$self->{"_LOOK"}     = "";
-####		$self->{"_LASTLOOK"} = "";
-####		return;
-####	    }
-####	    elsif ($n_char eq $lf_quit) {
-####		exit;
-####	    }
-####	    else {
 		$mpos = ord $n_char;
-####		if ($self->{istrip}) {
-####		    if ($mpos > 127) { $n_char = chr($mpos - 128); }
-####		}
-                $self->{"_LOOK"} .= $n_char;
-##	        print $n_char;
-####	        if ($cr_2_nl) { $n_char =~ s/\r/\n/os; }
-####	        if ($nl_2_crnl) { $n_char =~ s/\n/\r\n/os; }
-####	        if (($mpos < 32)  && $echo_ctl &&
-####			($mpos != is_stty_eol($self))) {
-####		    $n_char = chr($mpos + 64);
-####	            $self->write("^$n_char");
-####		}
-####		elsif (($mpos == 127) && $echo_ctl) {
-####	            $self->write("^.");
-####		}
-####		elsif ($self->{echonl} && ($n_char =~ "\n")) {
-####		    # also writes "\r\n" for onlcr
-####	            $self->write($n_char);
-####		}
-####		elsif ($self->{echo}) {
-####		    # also writes "\r\n" for onlcr
-####	            $self->write($n_char);
-####		}
+        $self->{"_LOOK"} .= $n_char;
 		$lookbuf = $self->{"_LOOK"};
-####		if (($lf_eof ne "") and ($lookbuf =~ /$lf_eof$/)) {
-####		    $self->{"_LOOK"}     = "";
-####		    $self->{"_LASTLOOK"} = "";
-####		    return $lookbuf;
-####		}
 		$count_in = 0;
 		foreach $pat ( @{ $self->{"_CMATCH"} } ) {
 		    if ($pat eq "-re") {
@@ -1656,8 +1536,8 @@ sub lookfor {
 			# always at $lookbuf end when processing single char
 		        if ( $lookbuf =~ s/$pat//s ) {
 		            $self->{"_LMATCH"} = $&;
-			    $got_match++;
-			}
+                    $got_match++;
+                }
 		    }
 		    elsif (($mpos = index($lookbuf, $pat)) > -1) {
 			$got_match++;
@@ -1668,8 +1548,7 @@ sub lookfor {
 		        $self->{"_LPATT"} = $self->{"_MATCH"}[$count_in];
 		        if (scalar @loc_char) {
 		            $self->{"_LASTLOOK"} = join("", @loc_char);
-##		            print ".$self->{\"_LASTLOOK\"}.";
-                        }
+                }
 		        else {
 		            $self->{"_LASTLOOK"} = "";
 		        }
@@ -1711,78 +1590,78 @@ sub streamline {
     }
 
     if ($size) {
-####    my ($bbb, $iii, $ooo, $eee) = status($self);
-####	if ($iii > $size) { $size = $iii; }
-	($count_in, $string_in) = $self->read($size);
-	return unless ($count_in);
+        ($count_in, $string_in) = $self->read($size);
+        return unless ($count_in);
         $loc .= $string_in;
     }
     else {
-	$loc .= $self->input;
+        $loc .= $self->input;
     }
 
     if ($loc ne "") {
         $self->{"_LOOK"} .= $loc;
-	$count_in = 0;
-	foreach $pat ( @{ $self->{"_CMATCH"} } ) {
-	    if ($pat eq "-re") {
-		$re_next++;
-		$count_in++;
-		next;
-	    }
-	    if ($re_next) {
-		$re_next = 0;
-	        if ( $self->{"_LOOK"} =~ /$pat/s ) {
-		    ( $match, $before, $after ) = ( $&, $`, $' );
-		    $got_match++;
-        	    $mpos = length($before);
-        	    if ($mpos) {
-        	        next if ($best_pos && ($mpos > $best_pos));
-			$best_pos = $mpos;
-			$best_pat = $self->{"_MATCH"}[$count_in];
-			$best_match = $match;
-			$best_before = $before;
-			$best_after = $after;
-	    	    } else {
-		        $self->{"_LPATT"} = $self->{"_MATCH"}[$count_in];
-		        $self->{"_LMATCH"} = $match;
-	                $self->{"_LASTLOOK"} = $after;
-		        $self->{"_LOOK"}     = "";
-		        return $before;
-		        # pattern at start will be best
-		    }
-		}
-	    }
-	    elsif (($mpos = index($self->{"_LOOK"}, $pat)) > -1) {
-		$got_match++;
-		$before = substr ($self->{"_LOOK"}, 0, $mpos);
-        	if ($mpos) {
-        	    next if ($best_pos && ($mpos > $best_pos));
-		    $best_pos = $mpos;
-		    $best_pat = $pat;
-		    $best_match = $pat;
-		    $best_before = $before;
-		    $mpos += length($pat);
-		    $best_after = substr ($self->{"_LOOK"}, $mpos);
-	    	} else {
-	            $self->{"_LPATT"} = $pat;
-		    $self->{"_LMATCH"} = $pat;
-		    $before = substr ($self->{"_LOOK"}, 0, $mpos);
-		    $mpos += length($pat);
-	            $self->{"_LASTLOOK"} = substr ($self->{"_LOOK"}, $mpos);
-		    $self->{"_LOOK"}     = "";
-		    return $before;
-		    # match at start will be best
-		}
-	    }
-	    $count_in++;
-	}
-	if ($got_match) {
-	    $self->{"_LPATT"} = $best_pat;
-	    $self->{"_LMATCH"} = $best_match;
+        $count_in = 0;
+        foreach $pat ( @{ $self->{"_CMATCH"} } ) {
+            if ($pat eq "-re") {
+                $re_next++;
+                $count_in++;
+                next;
+            }
+            if ($re_next) {
+                $re_next = 0;
+                if ( $self->{"_LOOK"} =~ /$pat/s ) {
+                    ( $match, $before, $after ) = ( $&, $`, $' );
+                    $got_match++;
+                    $mpos = length($before);
+                    if ($mpos) {
+                        next if ($best_pos && ($mpos > $best_pos));
+                        $best_pos = $mpos;
+                        $best_pat = $self->{"_MATCH"}[$count_in];
+                        $best_match = $match;
+                        $best_before = $before;
+                        $best_after = $after;
+                    }
+                    else {
+                        $self->{"_LPATT"} = $self->{"_MATCH"}[$count_in];
+                        $self->{"_LMATCH"} = $match;
+                        $self->{"_LASTLOOK"} = $after;
+                        $self->{"_LOOK"}     = "";
+                        return $before;
+                        # pattern at start will be best
+                    }
+                }
+            }
+            elsif (($mpos = index($self->{"_LOOK"}, $pat)) > -1) {
+                $got_match++;
+                $before = substr ($self->{"_LOOK"}, 0, $mpos);
+                if ($mpos) {
+                    next if ($best_pos && ($mpos > $best_pos));
+                    $best_pos = $mpos;
+                    $best_pat = $pat;
+                    $best_match = $pat;
+                    $best_before = $before;
+                    $mpos += length($pat);
+                    $best_after = substr ($self->{"_LOOK"}, $mpos);
+                }
+                else {
+                    $self->{"_LPATT"} = $pat;
+                    $self->{"_LMATCH"} = $pat;
+                    $before = substr ($self->{"_LOOK"}, 0, $mpos);
+                    $mpos += length($pat);
+                    $self->{"_LASTLOOK"} = substr ($self->{"_LOOK"}, $mpos);
+                    $self->{"_LOOK"}     = "";
+                    return $before;
+                    # match at start will be best
+                }
+            }
+            $count_in++;
+        }
+        if ($got_match) {
+            $self->{"_LPATT"} = $best_pat;
+            $self->{"_LMATCH"} = $best_match;
             $self->{"_LASTLOOK"} = $best_after;
-	    $self->{"_LOOK"}     = "";
-	    return $best_before;
+            $self->{"_LOOK"}     = "";
+            return $best_before;
         }
     }
     return "";
@@ -1796,23 +1675,23 @@ sub input {
     my $wanted = 255;
 
     if (nocarp && $self->{"_T_INPUT"}) {
-	$result = $self->{"_T_INPUT"};
-	$self->{"_T_INPUT"} = "";
-	return $result;
+        $result = $self->{"_T_INPUT"};
+        $self->{"_T_INPUT"} = "";
+        return $result;
     }
 
     if ( $self->{"C_VMIN"} ) {
-	$self->{"C_VMIN"} = 0;
-	write_settings($self);
+        $self->{"C_VMIN"} = 0;
+        write_settings($self);
     }
 
     my $got = POSIX::read ($self->{FD}, $result, $wanted);
 
     unless (defined $got) { $got = -1; }
     if ($got == -1) {
-	return "" if (&POSIX::EAGAIN == ($ok = POSIX::errno()));
-	return "" if (0 == $ok);	# at least Solaris acts like eof()
-	carp "Error #$ok in Device::SerialPort::input"
+        return "" if (&POSIX::EAGAIN == ($ok = POSIX::errno()));
+        return "" if (0 == $ok);	# at least Solaris acts like eof()
+        carp "Error #$ok in Device::SerialPort::input"
     }
     return $result;
 }
@@ -1904,18 +1783,10 @@ sub write_done {
     my $result;
     for (;;) {
         return unless $self->ioctl('TIOCOUTQ',\$mstat);
-        #if (!($rc=ioctl($self->{HANDLE}, $outcount, $mstat))) {
-        #    warn "TIOCOUTQ($outcount) ioctl: $!\n";
-        #    return;
-        #}
         $result = unpack('L', $mstat);
         return (0, 0) if ($result);	# characters pending
 
         return unless $self->ioctl('TIOCSERGETLSR',\$mstat);
-        #if (!($rc=ioctl($self->{HANDLE}, $txdone, $mstat))) {
-        #    warn "TIOCSERGETLSR($txdone) ioctl: $!\n";
-        #    return;
-        #}
         $result = (unpack('L', $mstat) & TIOCM_LE);
         last unless ($wait);
         last if ($result);		# shift register empty
@@ -1931,10 +1802,6 @@ sub modemlines {
 
     my $mstat = pack('L',0);
     return undef unless $self->ioctl('TIOCMGET',\$mstat);
-    #if (!ioctl($self->{HANDLE}, $getstat, $mstat)) {
-    #    warn "TIOCMGET($getstat) ioctl: $!\n";
-    #    return undef;
-    #}
     my $result = unpack('L', $mstat);
     if ($Babble) {
         printf "result = %x\n", $result;
@@ -1946,13 +1813,18 @@ sub modemlines {
     return $result;
 }
 
+# Strange thing is, this function doesn't always work for me.  I suspect
+# I have a broken serial card.  Everything else in my test system doesn't
+# work (USB, floppy) so why not serial too?
 sub wait_modemlines {
     return undef unless (@_ == 2);
     my $self = shift;
-    my $flags = shift;
+    my $flags = shift || 0;
     return undef unless ($self->can_wait_modemlines);
 
-    warn "wait flag value: ",$flags,"\n";
+    if ($Babble) {
+        printf "wait_modemlines flag = %u\n", $flags;
+    }
     my $mstat = pack('L',$flags);
     return $self->ioctl('TIOCMIWAIT',\$mstat);
 }
@@ -1973,26 +1845,15 @@ sub intr_count {
 
 sub status {
     my $self = shift;
-####    if (@_ and $testactive) {
-####        $self->{"_LATCH"} |= shift;
-####    }
     return if (@_);
     return unless ($self->can_status);
     my @stat = (0, 0, 0, 0);
     my $mstat = " ";
 
     return unless $self->ioctl('TIOCINQ', \$mstat);
-    #if (!(ioctl($self->{HANDLE}, $incount, $mstat))) {
-    #    warn "TIOCINQ($incount) ioctl: $!\n";
-    #    return;
-    #}
 
     $stat[ST_INPUT] = unpack('L', $mstat);
     return unless $self->ioctl('TIOCOUTQ', \$mstat);
-    #if (!(ioctl($self->{HANDLE}, $outcount, $mstat))) {
-    #    warn "TIOCOUTQ($outcount) ioctl: $!\n";
-    #    return;
-    #}
 
     $stat[ST_OUTPUT] = unpack('L', $mstat);
 
@@ -2016,16 +1877,12 @@ sub dtr_active {
     my $value=0;
     if (defined($bits->{'TIOCSDTR'}) &&
         defined($bits->{'TIOCCDTR'})) {
-#        warn "SDTR/CDTR\n";
         $value=0;
         $rc=$self->ioctl($on ? 'TIOCSDTR' : 'TIOCCDTR', \$value);
-        #$rc=ioctl($self->{HANDLE}, $on ? $dtrset : $dtrclear, 0);
     }
     else {
-#        warn "BIS/BIC\n";
         $value=$IOCTL_VALUE_DTR;
         $rc=$self->ioctl($on ? 'TIOCMBIS' : 'TIOCMBIC', \$value);
-        #$rc=ioctl($self->{HANDLE}, $on ? $bitset : $bitclear, $dtrout);
     }
     warn "dtr_active($on) ioctl: $!\n"    if (!$rc);
 
@@ -2065,10 +1922,8 @@ sub pulse_rts_on {
     return unless ($self->can_rts());
     my $delay = (shift)/1000;
     $self->rts_active(1) or warn "could not pulse rts on\n";
-##    print "rts on\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     $self->rts_active(0) or warn "could not restore from rts on\n";
-##    print "rts_off\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     1;
 }
@@ -2079,10 +1934,8 @@ sub pulse_dtr_on {
     return unless $self->can_ioctl();
     my $delay = (shift)/1000;
     $self->dtr_active(1) or warn "could not pulse dtr on\n";
-##    print "dtr on\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     $self->dtr_active(0) or warn "could not restore from dtr on\n";
-##    print "dtr_off\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     1;
 }
@@ -2093,10 +1946,8 @@ sub pulse_rts_off {
     return unless ($self->can_rts());
     my $delay = (shift)/1000;
     $self->rts_active(0) or warn "could not pulse rts off\n";
-##    print "rts off\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     $self->rts_active(1) or warn "could not restore from rts off\n";
-##    print "rts on\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     1;
 }
@@ -2107,10 +1958,8 @@ sub pulse_dtr_off {
     return unless $self->can_ioctl();
     my $delay = (shift)/1000;
     $self->dtr_active(0) or warn "could not pulse dtr off\n";
-##    print "dtr off\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     $self->dtr_active(1) or warn "could not restore from dtr off\n";
-##    print "dtr on\n"; ## DEBUG
     select (undef, undef, undef, $delay);
     1;
 }
@@ -2190,8 +2039,11 @@ sub ioctl
     my ($self,$code,$ref) = @_;
     return undef unless (defined $self->{NAME});
 
+
     if ($Babble) {
-        carp "ioctl $code($bits->{$code}) $ref";
+        my $num = $$ref;
+        $num = unpack('L', $num);
+        carp "ioctl $code($bits->{$code}) $ref: $num";
     }
 
     my $magic;
@@ -2285,10 +2137,6 @@ sub post_print {
     my $self = shift;
     return unless (@_);
     my $output = shift;
-##    if ($self->stty_opost) {
-##	if ($self->stty_ocrnl) { $output =~ s/\r/\n/osg; }
-##	if ($self->stty_onlcr) { $output =~ s/\n/\r\n/osg; }
-##    }
     my $to_do = length($output);
     my $done = 0;
     my $written = 0;
@@ -2555,8 +2403,8 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
      # simple echo with no control character processing
 
   if ($PortObj->can_wait_modemlines) {
-    $rc = $PortObj->wait_modemlines();
-    if (!$rc) { print "modemline status changed\n"; }
+    $rc = $PortObj->wait_modemlines( MS_RLSD_ON );
+    if (!$rc) { print "carrier detect changed\n"; }
   }
 
   if ($PortObj->can_modemlines) {
