@@ -5,7 +5,7 @@
 # $Id$
 #
 # Copyright (C) 1999, Bill Birthisel
-# Copyright (C) 2000-2004 Kees Cook
+# Copyright (C) 2000-2005 Kees Cook
 # kees@outflux.net, http://outflux.net/
 # 
 # This program is free software; you can redistribute it and/or
@@ -3306,7 +3306,7 @@ perltoot - Tom Christiansen's Object-Oriented Tutorial
 =head1 COPYRIGHT
 
  Copyright (C) 1999, Bill Birthisel. All rights reserved.
- Copyright (C) 2000-2004, Kees Cook.  All rights reserved.
+ Copyright (C) 2000-2005, Kees Cook.  All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
