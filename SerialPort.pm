@@ -492,9 +492,6 @@ sub new {
     $self->{"C_CFLAG"} |= (CS8|CLOCAL);
     &write_settings($self);
 
-    read_char_time(0); 	  # no time
-    read_const_time(100); # 10th of a second
-
     $self->{ALIAS} = $self->{NAME};	# so "\\.\+++" can be changed
 ##    print "opening $self->{NAME}\n"; ## DEBUG ##
 
@@ -528,6 +525,10 @@ sub new {
     $self->{CFG_3}		= "none";
 
     bless ($self, $class);
+
+    $self->read_char_time(0); 	  # no time
+    $self->read_const_time(100); # 10th of a second
+
     return $self;
 }
 
