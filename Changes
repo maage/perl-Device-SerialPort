@@ -1,6 +1,9 @@
 Revision history for Perl extension Device::SerialPort.
 
-0.22 (CVS) (Kees)
+0.23 (CVS)
+	
+
+0.22 2003-06-18 (Kees)
 	- added a notice about 4096 read limits on some machines
 	  noticed by Ed Morandi.
 	- built an rpm .spec file with the help of cpan2rpm.
