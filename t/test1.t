@@ -12,7 +12,7 @@ BEGIN { $| = 1; print "1..174\n"; }
 END {print "not ok 1\n" unless $loaded;}
 
 use POSIX qw(uname);
-# can't drain ports without modems on them under POSIX in Solaris 2.6
+# can not drain ports without modems on them under POSIX in Solaris 2.6
 my ($sysname, $nodename, $release, $version, $machine) = POSIX::uname();
 my $SKIPDRAIN=0;
 if ($sysname eq "SunOS" && $machine =~ /^sun/) {
@@ -22,7 +22,7 @@ if ($sysname eq "SunOS" && $machine =~ /^sun/) {
 use Device::SerialPort qw( :STAT 0.10 );
 require "DefaultPort.pm";
 $loaded = 1;
-print "ok 1\n";
+print "ok 1\n"; # 1
 
 ######################### End of black magic.
 

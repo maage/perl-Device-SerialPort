@@ -30,10 +30,15 @@ use strict;
 print "Module loaded\n";
 
 # your serial port.
-my $fname=shift(@ARGV);
-$fname="/dev/modem" unless (defined($fname));
-my $port=new Device::SerialPort($fname) || die "new($fname): $!\n";
-print "Port open\n";
+my ($device,$baud,$databits,$parity,$stopbits)=@ARGV;
+$device   ||= "/dev/modem";
+$baud	  ||= "9600";
+$databits ||= "8";
+$parity   ||= "none";
+$stopbits ||= "1";
+
+my $port=new Device::SerialPort($device) || die "new($device): $!\n";
+print "Port '$device' open\n";
 
 # Are the ioctls loaded?
 my $bool=$port->can_ioctl();
@@ -46,36 +51,36 @@ if (!$bool) {
 my @handshakes=$port->handshake;
 print "Handshakes:\n";
 grep(print("\t$_\n"),sort(@handshakes));
-my $handshake=$port->handshake("none");
-print "Port handshake: $handshake\n";
+$handshake=$port->handshake($handshake);
+print "Got handshake: $handshake\n";
 
 # Baud rate
 my @bauds=$port->baudrate;
 print "Bauds:\n";
-grep(print("\t$_\n"),sort(@bauds));
-my $baudrate=$port->baudrate("9600");
-print "Port baud: $baudrate\n";
+grep(print("\t$_\n"),sort { $b <=> $a } @bauds);
+$baudrate=$port->baudrate($baudrate);
+print "Got baud: $baudrate\n";
 
 # Databits
 my @databits=$port->databits;
 print "Databits:\n";
-grep(print("\t$_\n"),sort(@databits));
-my $databits=$port->databits(8);
-print "Port databits: $databits\n";
+grep(print("\t$_\n"),sort { $b <=> $a } @databits);
+$databits=$port->databits($databits);
+print "Got databits: $databits\n";
 
 # Parity
 my @parity=$port->parity;
 print "Parity:\n";
-grep(print("\t$_\n"),sort(@parity));
-my $parity=$port->parity("none");
-print "Port parity: $parity\n";
+grep(print("\t$_\n"),sort @parity);
+$parity=$port->parity($parity);
+print "Got parity: $parity\n";
 
 # Stopbits
 my @stopbits=$port->stopbits;
 print "Stopbits:\n";
-grep(print("\t$_\n"),sort(@stopbits));
-my $stopbits=$port->stopbits(1);
-print "Port stopbits: $stopbits\n";
+grep(print("\t$_\n"),sort { $b <=> $a } @stopbits);
+$stopbits=$port->stopbits($stopbits);
+print "Got stopbits: $stopbits\n";
 
 # Flip on DTR and RTS
 my $dtr=$port->dtr_active(1) ? "okay" : "failed";
@@ -105,7 +110,7 @@ my ($count,$str,$got,$cnt);
 readchunk();
 
 # Write an INIT to the modem
-($count)=$port->write("ATZ\r");
+($count)=$port->write("ATE1\r");
 print "written: $count\n";
 
 # Read a few chunks
@@ -128,5 +133,5 @@ sub readchunk
 		$cnt+=$count;
 	}
 	print "read: $cnt\n";
-	print "-:$str:-\n";
+	print "saw ->$str<-\n";
 }

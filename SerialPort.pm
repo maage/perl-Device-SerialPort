@@ -32,7 +32,11 @@ use IO::Handle;
 use Carp;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '0.23';
+# Use Linux kernel style version numbering, but with Perlism insanity
+# M.mmmrrr Major minor rev
+# Odd mmm is a devel version
+# Even mmm is a stable version
+$VERSION = 1.000_000;
 
 require Exporter;
 
