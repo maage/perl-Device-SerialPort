@@ -136,35 +136,34 @@ print "Got stopbits: $stopbits\n";
 linestatus();
 print "\n";
 
+my $delay=3;
+
 # Flip on DTR and RTS
 my $dtr=$port->dtr_active(1) ? "okay" : "failed";
 my $rts=$port->rts_active(1) ? "okay" : "failed";
-print "Port DTR ($dtr) and RTS ($rts) activated\n";
+print "Activated DTR($dtr) and RTS($rts) ... pausing for $delay seconds\n";
 linestatus();
 print "\n";
+sleep $delay;
 
-$rts=$port->rts_active(0) ? "okay" : "failed";
-print "Flipped RTS to off ($rts) (pausing for 5 seconds)\n";
-linestatus();
-print "\n";
-sleep 5;
-
-$rts=$port->rts_active(1) ? "okay" : "failed";
-print "Flipped RTS to on ($rts)\n";
-linestatus();
-print "\n";
-
-# Flip OFF dtr
 $dtr=$port->dtr_active(0) ? "okay" : "failed";
-print "Flipped DTR to off ($dtr) (pausing for 5 seconds)\n";
+$rts=$port->rts_active(0) ? "okay" : "failed";
+print "Deactivated DTR($dtr) and RTS($rts) ... pausing for $delay seconds\n";
 linestatus();
 print "\n";
-sleep 5;
+sleep $delay;
 
 $dtr=$port->dtr_active(1) ? "okay" : "failed";
-print "Flipped DTR to on ($dtr)\n";
+print "Activated DTR($dtr) ... pausing for $delay seconds\n";
 linestatus();
 print "\n";
+sleep $delay;
+
+$rts=$port->rts_active(1) ? "okay" : "failed";
+print "Activated RTS($rts) ... pausing for $delay seconds\n";
+linestatus();
+print "\n";
+sleep $delay;
 
 # Just in case: reset our timing and buffers
 $port->lookclear();
@@ -190,11 +189,22 @@ linestatus();
 undef $port;
 print "Port closed\n";
 
+sub writechunk
+{
+    my $str=shift;
+
+    my $count = $port->write($str);
+    print "wrote: $count\n";
+    $str=~s/([^\040-\176])/sprintf("{0x%02X}",ord($1))/ge;
+    print "written ->$str<-\n";
+}
+
 sub readchunk
 {
 	# read a chunk of data
 	sleep 1;
-	($count,$str)=$port->read(1);
+	my ($count,$str)=$port->read(1);
+    my $got;
 	$cnt=$count;
 	while ($count>0) {
 		($count,$got)=$port->read(1);
