@@ -1408,9 +1408,10 @@ sub read_vmin {
             carp "Error #$ok in Device::SerialPort::read";
             return;
         }
-#        elsif ($got == 0) {
-#            return;
-#        }
+        elsif ($got == 0 && $wanted!=0) {
+            # if read returns "0" on a non-zero request, it's EOF
+            return;
+        }
     }
 
     print "read_vmin=$got, ready=$ready, result=..$result..\n" if ($Babble);
