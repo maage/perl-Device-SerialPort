@@ -14,6 +14,8 @@ Revision history for Perl extension Device::SerialPort.
 	- added automatic system baud rate detection
 	- added modem line reporting to "modemtest"
 	- documented "modemtest"
+	- I think I finally found the parity problem that has been
+	  plauging this code since I took it over!
 
 0.22 2003-06-18 (Kees)
 	- added a notice about 4096 read limits on some machines

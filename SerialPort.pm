@@ -391,9 +391,19 @@ sub new {
     $self->{"C_OSPEED"} = $self->{"_OSPEED"};
 
     # Finally, default to "raw" mode for this package
-    $self->{"C_IFLAG"} &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
+    $self->{"C_IFLAG"} &= ~(IGNBRK|BRKINT|PARMRK|IGNPAR|INPCK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
     $self->{"C_OFLAG"} &= ~OPOST;
     $self->{"C_LFLAG"} &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
+
+    # "minicom" does some alarming things for setting up "raw", which is mostly
+    # just the direct manipulation of the i, o, and l termios flags
+    #$self->{"C_IFLAG"} = 0;
+    #$self->{"C_OFLAG"} = 0;
+    #$self->{"C_LFLAG"} = 0;
+
+    # Sane port
+    $self->{"C_IFLAG"} |= IGNBRK;
+    $self->{"C_CFLAG"} |= (CLOCAL|CREAD);
 
     # 9600 baud
     $self->{"C_OSPEED"} = $bauds{"9600"};
@@ -404,13 +414,11 @@ sub new {
     $self->{"C_CFLAG"} |= CS8;
 
     # disable parity
-    $self->{"C_CFLAG"} &= ~PARENB;
+    $self->{"C_CFLAG"} &= ~(PARENB | PARODD);
 
     # 1 stop bit
     $self->{"C_CFLAG"} &= ~CSTOPB;
 
-    # Sane port
-    $self->{"C_CFLAG"} |= (CLOCAL|CREAD);
     &write_settings($self);
 
     $self->{ALIAS} = $self->{NAME};	# so "\\.\+++" can be changed
@@ -818,33 +826,37 @@ sub baudrate {
     return 0;
 }
 
+# Interesting note about parity.  It seems that while the "correct" thing
+# to do is to enable inbound parity checking (INPCK) and to strip the bits,
+# this doesn't seem to be sane for a large number of systems, modems,
+# whatever.  If "INPCK" or "ISTRIP" is needed, please use the stty_inpck
+# and stty_istrip functions
 sub parity {
     my $self = shift;
     if (@_) {
-        # Should always strip the parity bit
-	if ( $_[0] eq "none" ) {
-	    $self->{"C_IFLAG"} &= ~(INPCK|ISTRIP);
-	    $self->{"C_CFLAG"} &= ~PARENB;
-	}
-	elsif ( $_[0] eq "odd" ) {
-	    $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
-	    $self->{"C_CFLAG"} |= (PARENB|PARODD);
-	}
-	elsif ( $_[0] eq "even" ) {
-	    $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
-	    $self->{"C_CFLAG"} |= PARENB;
-	    $self->{"C_CFLAG"} &= ~PARODD;
-	}
+        if ( $_[0] eq "none" ) {
+#	         $self->{"C_IFLAG"} &= ~(INPCK|ISTRIP);
+            $self->{"C_CFLAG"} &= ~(PARENB|PARODD);
+        }
+        elsif ( $_[0] eq "odd" ) {
+#	         $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
+            $self->{"C_CFLAG"} |= (PARENB|PARODD);
+        }
+        elsif ( $_[0] eq "even" ) {
+#	         $self->{"C_IFLAG"} |= (INPCK|ISTRIP);
+	        $self->{"C_CFLAG"} |= PARENB;
+            $self->{"C_CFLAG"} &= ~PARODD;
+        }
         else {
             if ($self->{U_MSG} or $Babble) {
                 carp "Can't set parity on $self->{ALIAS}";
             }
-	    return undef;
+            return undef;
         }
-	write_settings($self);
+        write_settings($self);
     }
     if (wantarray) { return ("none", "odd", "even"); }
-    return "none" unless ($self->{"C_IFLAG"} & INPCK);
+    return "none" unless ($self->{"C_IFLAG"} & PARENB);
     my $mask = (PARENB|PARODD);
     return "odd"  if ($mask == ($self->{"C_CFLAG"} & $mask));
     $mask = (PARENB);
@@ -1094,27 +1106,70 @@ sub stty_echoctl {
 sub stty_parmrk {
     my $self = shift;
     if (@_) {
-	if ( yes_true( shift ) ) {
-	    $self->{"C_IFLAG"} |= PARMRK;
+        if ( yes_true( shift ) ) {
+            $self->{"C_IFLAG"} |= PARMRK;
         } else {
-	    $self->{"C_IFLAG"} &= ~PARMRK;
-	}
-	write_settings($self);
+            $self->{"C_IFLAG"} &= ~PARMRK;
+        }
+        write_settings($self);
     }
     return wantarray ? @binary_opt : ($self->{"C_IFLAG"} & PARMRK);
 }
 
+# Ignore parity errors (considered dangerous)
+sub stty_ignpar {
+    my $self = shift;
+    if (@_) {
+        if ( yes_true( shift ) ) {
+            $self->{"C_IFLAG"} |= IGNPAR;
+        } else {
+            $self->{"C_IFLAG"} &= ~IGNPAR;
+	    }
+        write_settings($self);
+    }
+    return wantarray ? @binary_opt : ($self->{"C_IFLAG"} & IGNPAR);
+}
+
+# Ignore breaks
+sub stty_ignbrk {
+    my $self = shift;
+    if (@_) {
+        if ( yes_true( shift ) ) {
+            $self->{"C_IFLAG"} |= IGNBRK;
+        } else {
+            $self->{"C_IFLAG"} &= ~IGNBRK;
+        }
+        write_settings($self);
+    }
+    return ($self->{"C_IFLAG"} & IGNBRK) ? 1 : 0;
+}
+
+# Strip parity bit
 sub stty_istrip {
     my $self = shift;
     if (@_) {
-	if ( yes_true( shift ) ) {
-	    $self->{"C_IFLAG"} |= ISTRIP;
+        if ( yes_true( shift ) ) {
+            $self->{"C_IFLAG"} |= ISTRIP;
         } else {
-	    $self->{"C_IFLAG"} &= ~ISTRIP;
-	}
-	write_settings($self);
+            $self->{"C_IFLAG"} &= ~ISTRIP;
+        }
+        write_settings($self);
     }
     return ($self->{"C_IFLAG"} & ISTRIP) ? 1 : 0;
+}
+
+# check incoming parity bit
+sub stty_inpck {
+    my $self = shift;
+    if (@_) {
+        if ( yes_true( shift ) ) {
+            $self->{"C_IFLAG"} |= INPCK;
+        } else {
+            $self->{"C_IFLAG"} &= ~INPCK;
+        }
+        write_settings($self);
+    }
+    return ($self->{"C_IFLAG"} & INPCK) ? 1 : 0;
 }
 
 sub stty_icrnl {
@@ -1822,12 +1877,12 @@ sub error_msg {
 sub parity_enable {
     my $self = shift;
     if (@_) {
-	if ( yes_true( shift ) ) {
-	    $self->{"C_CFLAG"} |= PARENB;
+        if ( yes_true( shift ) ) {
+            $self->{"C_CFLAG"} |= PARENB;
         } else {
-	    $self->{"C_CFLAG"} &= ~PARENB;
-	}
-	write_settings($self);
+            $self->{"C_CFLAG"} &= ~PARENB;
+        }
+        write_settings($self);
     }
     return wantarray ? @binary_opt : ($self->{"C_CFLAG"} & PARENB);
 }
@@ -2351,7 +2406,7 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
 
 =head2 Constructors
 
-       # $quiet and $lockfile are optional
+  # $quiet and $lockfile are optional
   $PortObj = new Device::SerialPort ($PortName, $quiet, $lockfile)
        || die "Can't open $PortName: $!\n";
 
@@ -2368,15 +2423,15 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
   $PortObj->save($Configuration_File_Name)
        || warn "Can't save $Configuration_File_Name: $!\n";
 
-       # currently optional after new, POSIX version expected to succeed
+  # currently optional after new, POSIX version expected to succeed
   $PortObj->write_settings;
 
-       # rereads file to either return open port to a known state
-       # or switch to a different configuration on the same port
+  # rereads file to either return open port to a known state
+  # or switch to a different configuration on the same port
   $PortObj->restart($Configuration_File_Name)
        || warn "Can't reread $Configuration_File_Name: $!\n";
 
-       # "app. variables" saved in $Configuration_File, not used internally
+  # "app. variables" saved in $Configuration_File, not used internally
   $PortObj->devicetype('none');     # CM11, CM17, 'weeder', 'modem'
   $PortObj->hostname('localhost');  # for socket-based implementations
   $PortObj->hostaddr(0);            # false unless specified
@@ -2385,10 +2440,10 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
   $PortObj->cfg_param_2('none');    # 3 spares should be enough for now
   $PortObj->cfg_param_3('none');    # one may end up as a log file path
 
-      # test suite use only
+  # test suite use only
   @necessary_param = Device::SerialPort->set_test_mode_active(1);
 
-      # exported by :PARAM
+  # exported by :PARAM
   nocarp || carp "Something fishy";
   $a = SHORTsize;			# 0xffff
   $a = LONGsize;			# 0xffffffff
@@ -2397,37 +2452,37 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
 
 =head2 Configuration Parameter Methods
 
-     # most methods can be called two ways:
+  # most methods can be called two ways:
   $PortObj->handshake("xoff");           # set parameter
   $flowcontrol = $PortObj->handshake;    # current value (scalar)
 
-     # The only "list context" method calls from Win32::SerialPort
-     # currently supported are those for baudrate, parity, databits,
-     # stopbits, and handshake (which only accept specific input values).
+  # The only "list context" method calls from Win32::SerialPort
+  # currently supported are those for baudrate, parity, databits,
+  # stopbits, and handshake (which only accept specific input values).
   @handshake_opts = $PortObj->handshake; # permitted choices (list)
 
-     # similar
+  # similar
   $PortObj->baudrate(9600);
   $PortObj->parity("odd");
   $PortObj->databits(8);
   $PortObj->stopbits(1);	# POSIX does not support 1.5 stopbits
 
-     # these are essentially dummies in POSIX implementation
-     # the calls exist to support compatibility
+  # these are essentially dummies in POSIX implementation
+  # the calls exist to support compatibility
   $PortObj->buffers(4096, 4096);	# returns (4096, 4096)
   @max_values = $PortObj->buffer_max;	# returns (4096, 4096)
   $PortObj->reset_error;		# returns 0
 
-     # true/false parameters (return scalar context only)
-     # parameters exist, but message processing not yet fully implemented
+  # true/false parameters (return scalar context only)
+  # parameters exist, but message processing not yet fully implemented
   $PortObj->user_msg(ON);	# built-in instead of warn/die above
   $PortObj->error_msg(ON);	# translate error bitmasks and carp
 
   $PortObj->parity_enable(F);	# faults during input
   $PortObj->debug(0);
 
-     # true/false capabilities (read only)
-     # most are just constants in the POSIX case
+  # true/false capabilities (read only)
+  # most are just constants in the POSIX case
   $PortObj->can_baud;			# 1
   $PortObj->can_databits;		# 1
   $PortObj->can_stopbits;		# 1
@@ -2662,7 +2717,10 @@ Any legal value.
 =item parity
 
 One of the following: "none", "odd", "even".
-If you select anything except "none", you will need to set B<parity_enable>.
+
+By default, incoming parity is not checked.  This mimics the behavior
+of most terminal programs (like "minicom").  If you need parity checking
+enabled, please use the "stty_inpck" and "stty_istrip" functions.
 
 =item databits
 
@@ -2830,7 +2888,11 @@ if you are not sure what they do.
   $PortObj->stty_echoe;
   $PortObj->stty_echok;
   $PortObj->stty_echonl;
+  $PortObj->stty_ignbrk;
   $PortObj->stty_istrip;
+  $PortObj->stty_inpck;
+  $PortObj->stty_parmrk;
+  $PortObj->stty_ignpar;
   $PortObj->stty_icrnl;
   $PortObj->stty_igncr;
   $PortObj->stty_inlcr;
