@@ -3,7 +3,7 @@
 /Makefile
 /SerialPort.bs
 /SerialPort.c
-/autom4te-*.cache
+/autom4te*.cache
 /blib
 /config.h
 /config.log

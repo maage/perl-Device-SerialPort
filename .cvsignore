@@ -5,7 +5,7 @@ config.status
 config.log
 config.h
 blib
-autom4te-*.cache
+autom4te*.cache
 SerialPort.c
 SerialPort.bs
 Makefile
