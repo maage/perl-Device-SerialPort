@@ -94,7 +94,8 @@ FILES:
 
  t			- test directory
  t/Altport.pm		- stub for inheritance test
- t/test1.t		- RUN ME FIRST, basic tests
+ t/01timing.t           - tests millisecond counter in "get_tick_count"
+ t/test1.t		- tests basic port function
  t/test2.t		- tests restarting_a_configuration and timeouts
  t/test3.t		- Inheritance and export version of test1.t
  t/test4.t		- Inheritance version of test2.t and "restart"

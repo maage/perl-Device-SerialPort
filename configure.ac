@@ -22,6 +22,7 @@ AC_CHECK_HEADERS(sys/modem.h)		dnl HPUX
 dnl Actually find all the defines in the suspected headers
 AC_LANG(C)
 for kees_define in \
+	_SC_CLK_TCK \
 	TIOCMBIS TIOCMBIC TIOCMGET \
 	CRTSCTS OCRNL ONLCR ECHOKE ECHOCTL \
 	TIOCM_CAR TIOCM_CD TIOCM_RNG TIOCM_RI TIOCM_CTS TIOCM_DSR \
@@ -35,6 +36,9 @@ for kees_define in \
 	AC_LINK_IFELSE(
 		[AC_LANG_PROGRAM(
 			[[
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
 #ifdef HAVE_SYS_IOCTL_H
 # include <sys/ioctl.h>
 #endif
