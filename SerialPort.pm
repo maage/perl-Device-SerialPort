@@ -37,7 +37,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 # M.mmmrrr Major minor rev
 # Odd mmm is a devel version
 # Even mmm is a stable version
-$VERSION = 1.000_002;
+$VERSION = 1.000_003;
 
 require Exporter;
 
