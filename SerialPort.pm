@@ -526,8 +526,9 @@ sub new {
 
     bless ($self, $class);
 
-    $self->read_char_time(0); 	  # no time
-    $self->read_const_time(100); # 10th of a second
+#	These might be a good idea
+#    $self->read_char_time(0); 	  # no time
+#    $self->read_const_time(100); # 10th of a second
 
     return $self;
 }
@@ -1372,16 +1373,25 @@ sub read_vmin {
     my $tout;
     my $ready = select($rout=$rin, $wout=undef, $eout=$ein, $tout=$tin);
 
-    my $got = POSIX::read ($self->{FD}, $result, $wanted);
+    my $got=0;
+    #my $got = POSIX::read ($self->{FD}, $result, $wanted);
 
-    unless (defined $got) {
-##	$got = -1;	## DEBUG
-	return (0,"") if (&POSIX::EAGAIN == ($ok = POSIX::errno()));
-	return (0,"") if (!$ready and (0 == $ok));
-		# at least Solaris acts like eof() in this case
-	carp "Error #$ok in Device::SerialPort::read";
-	return;
+# added..
+    if ($ready>0) {
+        $got = POSIX::read ($self->{FD}, $result, $wanted);
+# end
+
+        unless (defined $got) {
+##   	    $got = -1;	## DEBUG
+	    return (0,"") if (&POSIX::EAGAIN == ($ok = POSIX::errno()));
+	    return (0,"") if (!$ready and (0 == $ok));
+		    # at least Solaris acts like eof() in this case
+	    carp "Error #$ok in Device::SerialPort::read";
+	    return;
+        }
+# added..
     }
+# end
 
     print "read_vmin=$got, ready=$ready, result=..$result..\n" if ($Babble);
     return ($got, $result);
