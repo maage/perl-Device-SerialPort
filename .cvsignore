@@ -1,1 +1,12 @@
 random
+*.cfg
+pm_to_blib
+config.status
+config.log
+config.h
+blib
+autom4te-*.cache
+SerialPort.c
+SerialPort.bs
+Makefile
+Device-SerialPort-*.tar.gz

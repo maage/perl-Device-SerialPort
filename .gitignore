@@ -1,1 +1,13 @@
+/*.cfg
+/Device-SerialPort-*.tar.gz
+/Makefile
+/SerialPort.bs
+/SerialPort.c
+/autom4te-*.cache
+/blib
+/config.h
+/config.log
+/config.status
+/pm_to_blib
 /random
+t/DefaultPort.pm
