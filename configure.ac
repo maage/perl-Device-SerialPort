@@ -132,15 +132,15 @@ else
 fi
 
 dnl Weird Flow Control Setting
-AC_MSG_CHECKING([[weird CTS/RTS flow control]])
+AC_MSG_CHECKING([[normal CTS/RTS flow control]])
 if test "$kees_got_CTSXON" = "yes" &&
    test "$kees_got_RTSXOFF" = "yes" &&
    test "$kees_got_TCGETX" = "yes" &&
    test "$kees_got_TCSETX" = "yes"; then
-	AC_MSG_RESULT([yes])
+	AC_MSG_RESULT([no])
 	AC_MSG_WARN([[Your system does CTS/RTS flow control strangely.  Hopefully, we can work around it]])
 else
-	AC_MSG_RESULT([no])
+	AC_MSG_RESULT([yes])
 fi
 
 AC_OUTPUT
