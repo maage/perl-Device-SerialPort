@@ -87,4 +87,6 @@ Revision history for Perl extension Device::SerialPort.
 	- added 'sys/modem.ph' for broke HPUX headers
         - fixed *BSD tiocmget and tick counts, care of
                 joerg_wunsch@interface-systems.de
+        - fixed the HPUX tioc* stuff, care of
+                "Chang, Jerry" <Jerry.Chang@pyxis.com>
 

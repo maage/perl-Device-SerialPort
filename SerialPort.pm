@@ -29,13 +29,26 @@ $ms_per_tick = 1000.0 / POSIX::sysconf(&POSIX::_SC_CLK_TCK);
 if ($sysname eq "SunOS" && $machine =~ /^sun/) {
 	eval "sub __sparc () {1;}";
 }
+
+# h2ph's fault on *BSD and HPUX: sizeof(something) cannot be
+# interpreted inside perl, so since the ioctl commands encode
+# sizeof(arg) into their value, all ioctls that take arguments
+# get the wrong value assigned. 
+# We must manually overwrite this where needed.                
+# These are NOT safe!  They're based on observed results from certain machines.
 if ($sysname =~ /^(Free|Net|Open)BSD$/) {                                      
-        # h2ph's fault on *BSD: sizeof(something) cannot be interpreted         
-        # inside perl, so since the BSD ioctl commands encode sizeof(arg)       
-        # into their value, all ioctls that take arguments get the wrong        
-        # value assigned.  Manually overwrite this where needed.                
-        eval "sub TIOCMGET { 0x4004746a; }";                                    
+        eval "sub TIOCMBIS { 0x8004746c }";
+        eval "sub TIOCMBIC { 0x8004746b }";
+        eval "sub TIOCMGET { 0x4004746a }";
+        # *BSD doesn't seem to have TCGETX and TCSETX
 }            
+if ($sysname =~ /^HP-UX$/) {
+        eval "sub TIOCMBIS { 0x80044d0c }";
+        eval "sub TIOCMBIC { 0x80044d0d }";
+        eval "sub TIOCMGET { 0x40044d00 }";
+        eval "sub TCGETX { 0x401a5800 }";
+        eval "sub TCSETX { 0x801a5801 }";
+}
 
 # Need to determine location (Linux, Solaris, AIX, BSD known & working)
 @LOCATIONS=(	
