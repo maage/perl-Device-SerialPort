@@ -33,7 +33,8 @@ if ($sysname eq "SunOS" && $machine =~ /^sun/) {
                 'asm/termios.ph', # Linux
 		'sys/termiox.ph', # AIX
                 'sys/termios.ph', # AIX, OpenBSD
-                'sys/ttycom.ph'   # OpenBSD
+                'sys/ttycom.ph',  # OpenBSD
+		'sys/modem.ph'	  # HPUX
 );
 foreach $loc (@LOCATIONS) {
    print "trying '$loc'... " if ($VERBOSE);
