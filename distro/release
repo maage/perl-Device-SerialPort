@@ -1,0 +1,100 @@
+#!/bin/bash
+# Name of the software package
+PACKAGE="Device-SerialPort"
+# Location of website root for this project
+WWWBASE="/home/nemesis/web-sites/dist/sendpage.org/device-serialport/"
+# Location to get packages from on website
+WWWDL="$WWWBASE/download"
+# Locateion to unpack packages for the website
+WWWUNPACK="$WWWDL/rel"
+# List of files that need to be "text"ified for the website
+TEXTLIST="README Changes TODO"
+
+# TODO:  (in no particular order)
+#	- make CPAN an option (or detected)
+# 	- find version in code
+#	- make sure this version doesn't already exist on sf/cpan/fm
+#	- maybe *build* the website from here using set of templates
+#	- get script options from some kind of meta-data file
+#	- make "build" process configurable
+#		- steps
+#		- expected output file
+#	- replace "CVS" in Changes with actual date instead of warning
+#	- rewrite in Perl
+#	- do more file conversions besides $TEXTLIST copies (pod2html, etc)
+
+VERSION=$1
+
+if [ -z $VERSION ]; then
+	echo 'what version?'
+	exit 1
+fi
+
+VERSIONPERL=`perl -e '
+	($maj,$min,$rev)=split(/\./,$ARGV[0]);
+	$ver=sprintf("%d.%03d%03d",$maj,$min,$rev);
+	print ($ver+0),"\n";
+' $VERSION`
+CVSTAG=rel-`echo $VERSION | sed -e 's/\./-/g'`
+VERSIONED="$PACKAGE-$VERSION"
+VERSIONTGZ="$PACKAGE-$VERSIONPERL"
+TGZ="$VERSIONTGZ.tar.gz"
+
+grep '\(CVS\)' Changes && {
+	echo "Update the Changes' release date"
+	exit 1
+}
+grep "rpmversion $VERSION" Device-SerialPort.spec || {
+	echo "Update versions in .spec file"
+	exit 1
+}
+grep ",$VERSION," configure.ac || {
+	echo "Update version in configure.ac file"
+	exit 1
+}
+grep -F '('"${VERSION}-" debian/changelog || {
+	echo "Add version to debian/changelog file"
+	exit 1
+}
+
+autoheader || exit 1
+autoconf || exit 1
+perl Makefile.PL || exit 1
+make || exit 1
+#make test || exit 1
+make dist || exit 1
+cvs commit -m "Releasing version $VERSION" || exit 1
+
+# Tag it
+cvs tag -RFc $CVSTAG || exit 1
+
+# Put it up on sourceforge and CPAN
+ncftpput upload.sf.net /incoming $TGZ || exit 1
+ncftpput pause.cpan.org /incoming $TGZ || exit 1
+
+# Copy to website download area
+cp $TGZ $WWWDL || exit 1
+
+# Update "latest is" file
+rm $WWWDL/LATEST* || exit 1
+echo "$VERSIONPERL" > $WWWDL/LATEST-IS-$VERSIONPERL || exit 1
+
+# Unpack for easy file browsing
+(cd $WWWUNPACK && \
+        tar zxf $WWWDL/$TGZ)
+
+# Clean up old unpacked directories
+find $WWWUNPACK -type d -mtime +90 -maxdepth 1 | grep $PACKAGE | xargs --no-run-if-empty rm -rf
+
+# Update textified files
+(cd $WWWBASE && \
+        for i in $TEXTLIST ; do \
+                cat $WWWUNPACK/$VERSIONTGZ/$i > $i.txt; \
+        done)
+
+# Perform HTTP magic to spawn CPAN update
+# Perform HTTP magic to spawn sf update
+# Perform HTTP magic to announce on freshmeat
+
+# sync up the website
+web-sync
