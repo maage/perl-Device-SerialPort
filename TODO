@@ -1,7 +1,6 @@
-Last updated Jan 27, 2002
+Last updated Mar 19, 2002
 
 
-- fix OpenBSD modem flag reading
 - fix AIX hardware flow control
 - fix lockfile support
 
