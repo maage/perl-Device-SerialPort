@@ -1927,12 +1927,12 @@ sub modemlines {
 }
 
 sub wait_modemlines {
-    return undef unless (@_ == 1);
+    return undef unless (@_ == 2);
     my $self = shift;
     return undef unless ($self->can_modemlines);
 
     my $mstat = pack('L',shift);
-    return $self->ioctl('TIOCMIWAIT',$mstat);
+    return $self->ioctl('TIOCMIWAIT',\$mstat);
 }
 
 sub intr_count {
