@@ -1,12 +1,14 @@
 Revision history for Perl extension Device::SerialPort.
 
-0.15 (Kees)
+0.20 2003-06-12 (Kees)
+        - fixed some truth bugs found by David Dyck <david.dyck@fluke.com>
 	- totally rewrote serial bit detection code to use "normal"
           perl XS routines.  Had to even toss in a "configure" script
           to make it really robust.
-
-0.14 (Kees)
-        - fixed some truth bugs found by David Dyck <david.dyck@fluke.com>
+	- jumped up to version 0.20 just because it's just a big change
+          to the build process.  Everything else appears undisturbed, but
+          I want to give some time for testing it out on other
+          architectures.
 
 0.13 2002-05-31 (Kees)
 	- added 'sys/modem.ph' for broken HPUX headers

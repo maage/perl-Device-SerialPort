@@ -1,6 +1,27 @@
-# Note: This is a POSIX version of the Win32::Serialport module
-#       ported by Joe Doss, Kees Cook 
-#       for use with the MisterHouse and Sendpage programs
+# This is a POSIX version of the Win32::Serialport module
+# ported by Joe Doss, Kees Cook 
+# Originally for use with the MisterHouse and Sendpage programs
+#
+# $Id$
+#
+# Copyright (C) 2003 Kees Cook
+# kees@outflux.net, http://outflux.net/
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+# http://www.gnu.org/copyleft/gpl.html
+#
 package Device::SerialPort;
 
 use 5.006;
@@ -11,7 +32,7 @@ use IO::Handle;
 use Carp;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '0.15';
+$VERSION = '0.20';
 
 require Exporter;
 
