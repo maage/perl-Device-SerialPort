@@ -460,7 +460,7 @@ my $file2 = "/dev/badport";
 my $ob2;
 is_bad ($ob2 = Device::SerialPort->new ($file2));	# 111
 is_bad (defined $ob2);					# 112
-is_zero ($ob2 = Device::SerialPort->new ($file2, 1));	# 113
+is_bad ($ob2 = Device::SerialPort->new ($file2, 1));	# 113
 is_bad ($ob2 = Device::SerialPort->new ($file2, 0));	# 114
 is_bad (defined $ob2);					# 115
 
@@ -683,7 +683,7 @@ print LF "$$\n";
 close LF;
 
 is_zero ($ob = Device::SerialPort->start ($cfg2));		# 169
-is_zero ($ob = Device::SerialPort->new ($file, 1, $tstlock));	# 170
+is_bad  ($ob = Device::SerialPort->new ($file, 1, $tstlock));	# 170
 unlink $tstlock;
 
 ## 171 - 174: Check File Headers with Lock

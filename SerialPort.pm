@@ -298,12 +298,7 @@ sub new {
     $self->{NAME}     = $nameOrConf;
 
 
-    # bbw change: 03/10/99
-    #  - Add quiet option so we can do a 'test'
-    #    new (print no error if fail)
-    # 
-    my $quiet = shift;
-
+    shift; # ignore "$quiet" parameter
     my $lockfile = shift;
     if ($lockfile) {
         $self->{LOCK} = $lockfile;
@@ -312,13 +307,8 @@ sub new {
 				    &POSIX::O_CREAT |
 				    &POSIX::O_NOCTTY |
 				    &POSIX::O_EXCL);
-        unless (defined $lockf) {
-            unless ($quiet) {
-                nocarp or carp "can't open lockfile: $self->{LOCK}\n"; 
-            }
-            return 0 if ($quiet);
-            return;
-        }
+        return undef if (!defined($lockf));
+
         my $pid = "$$\n";
         $ok = POSIX::write($lockf, $pid, length $pid);
         my $ok2 = POSIX::close($lockf);
@@ -336,18 +326,15 @@ sub new {
 
     unless (defined $self->{FD}) { $self->{FD} = -1; }
     unless ($self->{FD} >= 0) {
-        unless ($quiet) {
-            nocarp or carp "can't open device: $self->{NAME}\n"; 
-        }
-        $self->{FD} = -1;
+        # the "unlink" will destroy the err code, so preserve it
+        my $save_err=$!+0;
+
         if ($self->{LOCK}) {
-	    $ok = unlink $self->{LOCK};
-	    unless ($ok or $quiet) {
-                nocarp or carp "can't remove lockfile: $self->{LOCK}\n"; 
-    	    }
+            unlink $self->{LOCK};
             $self->{LOCK} = "";
         }
-        return 0 if ($quiet);
+
+        $!=$save_err+0;
         return undef;
     }
 
@@ -360,7 +347,7 @@ sub new {
     $ok = $self->{TERMIOS}->getattr($self->{FD});
 
     unless ( $ok ) {
-        carp "can't getattr";
+        carp "can't getattr: $!";
         undef $self;
         return undef;
     }
@@ -454,10 +441,8 @@ sub new {
 
     bless ($self, $class);
 
-    #unless ($quiet or ($bitset && $bitclear && $rtsout &&
-	#    (($dtrset && $dtrclear) || $dtrout)) ) {
     unless ($self->can_ioctl()) {
-       nocarp or warn "disabling ioctl methods - system constants not found\n";
+       nocarp or carp "disabling ioctl methods - system constants not found\n";
     }
 
 #	These might be a good idea (but we'll need to change the tests)
@@ -491,9 +476,9 @@ sub write_settings {
         print "writing settings to $self->{ALIAS}\n";
     }
 
-    if (!$result) {
-        carp "Failed to set termios settings\n";
-    }
+    #if (!$result) {
+    #    carp "Failed to set termios settings: $!\n";
+    #}
    
     return $result; 
 }
@@ -508,8 +493,8 @@ sub save {
 
     my $filename = shift;
     unless ( open CF, ">$filename" ) {
-        carp "can't open file: $filename"; 
-        return;
+        #carp "can't open file: $filename"; 
+        return undef;
     }
     print CF "$cfg_file_sig";
     print CF "$self->{NAME}\n";
@@ -546,7 +531,7 @@ sub get_start_values {
     my $filename = shift;
 
     unless ( open CF, "<$filename" ) {
-        carp "can't open file: $filename"; 
+        carp "can't open file: $filename: $!"; 
         return;
     }
     my ($signature, $name, $lockfile, @values) = <CF>;
@@ -624,7 +609,7 @@ sub start {
     my $filename = shift;
 
     unless ( open CF, "<$filename" ) {
-        carp "can't open file: $filename"; 
+        carp "can't open file: $filename: $!"; 
         return;
     }
     my ($signature, $name, $lockfile, @values) = <CF>;
@@ -853,15 +838,15 @@ sub parity {
             }
             return undef;
         }
-        write_settings($self);
+        return undef if (!(write_settings($self)));
     }
     if (wantarray) { return ("none", "odd", "even"); }
-    return "none" unless ($self->{"C_IFLAG"} & PARENB);
+    return "none" unless ($self->{"C_CFLAG"} & PARENB);
     my $mask = (PARENB|PARODD);
     return "odd"  if ($mask == ($self->{"C_CFLAG"} & $mask));
     $mask = (PARENB);
     return "even" if ($mask == ($self->{"C_CFLAG"} & $mask));
-    return "none";
+    return "unknown";
 }
 
 sub databits {
@@ -2118,31 +2103,35 @@ sub close {
     if ($self->{FD}) {
         purge_all ($self);
 
-	# copy the original values into "current" values
-	foreach $item (keys %c_cc_fields) {
-	    $self->{"C_$item"} = $self->{"_$item"};
-	}
+        # Gracefully handle shutdown without termios
+        if (defined($self->{TERMIOS})) {
+            # copy the original values into "current" values
+            foreach $item (keys %c_cc_fields) {
+        	    $self->{"C_$item"} = $self->{"_$item"};
+    	    }
 
-	$self->{"C_CFLAG"} = $self->{"_CFLAG"};
-	$self->{"C_IFLAG"} = $self->{"_IFLAG"};
-	$self->{"C_ISPEED"} = $self->{"_ISPEED"};
-	$self->{"C_LFLAG"} = $self->{"_LFLAG"};
-	$self->{"C_OFLAG"} = $self->{"_OFLAG"};
-	$self->{"C_OSPEED"} = $self->{"_OSPEED"};
+        	$self->{"C_CFLAG"} = $self->{"_CFLAG"};
+        	$self->{"C_IFLAG"} = $self->{"_IFLAG"};
+        	$self->{"C_ISPEED"} = $self->{"_ISPEED"};
+        	$self->{"C_LFLAG"} = $self->{"_LFLAG"};
+        	$self->{"C_OFLAG"} = $self->{"_OFLAG"};
+        	$self->{"C_OSPEED"} = $self->{"_OSPEED"};
 	
-	write_settings($self);
+        	write_settings($self);
+        }
 
         $ok = POSIX::close($self->{FD});
-	# we need to explicitly close this handle
-	$self->{HANDLE}->close if ($self->{HANDLE}->opened);
 
-	$self->{FD} = undef;
-	$self->{HANDLE} = undef;
+    	# we need to explicitly close this handle
+    	$self->{HANDLE}->close if ($self->{HANDLE}->opened);
+
+    	$self->{FD} = undef;
+    	$self->{HANDLE} = undef;
     }
     if ($self->{LOCK}) {
-	unless ( unlink $self->{LOCK} ) {
+    	unless ( unlink $self->{LOCK} ) {
             nocarp or carp "can't remove lockfile: $self->{LOCK}\n"; 
-	}
+    	}
         $self->{LOCK} = "";
     }
     $self->{NAME} = undef;
@@ -2406,7 +2395,7 @@ Device::SerialPort - Linux/POSIX emulation of Win32::SerialPort functions.
 
 =head2 Constructors
 
-  # $quiet and $lockfile are optional
+  # $lockfile is optional
   $PortObj = new Device::SerialPort ($PortName, $quiet, $lockfile)
        || die "Can't open $PortName: $!\n";
 
@@ -2640,24 +2629,16 @@ for binary transfers. A separate C<binmode> is not needed.
   $PortObj = new Device::SerialPort ($PortName, $quiet, $lockfile)
        || die "Can't open $PortName: $!\n";
 
-There are two optional parameters for B<new>. Failure to open a port
-prints an error message to STDOUT by default. Since other applications
-can use the port, one source of failure is "port in use". There was
-originally no way to check this without getting a "fail message".
-Setting C<$quiet> disables this built-in message. It also returns 0
-instead of C<undef> if the port is unavailable (still FALSE, used for
-testing this condition - other faults may still return C<undef>).
-Use of C<$quiet> only applies to B<new>.
-
-The C<$lockfile> parameter has a related purpose. It will attempt to
-create a file (containing just the current process id) at the location
-specified. This file will be automatically deleted when the C<$PortObj>
-is no longer used (by DESTROY). You would usually request C<$lockfile>
-with C<$quiet> true to disable messages while attempting to obtain
-exclusive ownership of the port via the lock. Lockfiles are experimental
-in Version 0.07. They are intended for use with other applications. No
-attempt is made to resolve port aliases (/dev/modem == /dev/ttySx) or
-to deal with login processes such as getty and uugetty.
+The C<$quiet> parameter is ignored and is only there for compatibility
+with Win32::SerialPort.  The C<$lockfile> parameter is optional.  It will
+attempt to create a file (containing just the current process id) at the
+location specified. This file will be automatically deleted when the
+C<$PortObj> is no longer used (by DESTROY). You would usually request
+C<$lockfile> with C<$quiet> true to disable messages while attempting
+to obtain exclusive ownership of the port via the lock. Lockfiles are
+experimental in Version 0.07. They are intended for use with other
+applications. No attempt is made to resolve port aliases (/dev/modem ==
+/dev/ttySx) or to deal with login processes such as getty and uugetty.
 
 Using a F<Configuration File> with B<new> or by using second constructor,
 B<start>, scripts can be simplified if they need a constant setup. It
