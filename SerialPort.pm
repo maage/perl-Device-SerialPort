@@ -4,7 +4,8 @@
 #
 # $Id$
 #
-# Copyright (C) 2003 Kees Cook
+# Copyright (C) 1999, Bill Birthisel
+# Copyright (C) 2000-2004 Kees Cook
 # kees@outflux.net, http://outflux.net/
 # 
 # This program is free software; you can redistribute it and/or
@@ -676,7 +677,7 @@ sub can_ioctl {
         defined($bits->{'TIOCMBIC'}) &&         # Turn off
         defined($bits->{'TIOCM_RTS'}) &&        # RTS value
         ( ( defined($bits->{'TIOCSDTR'}) &&     # DTR ability/value
-            defined($bits-{'TIOCCDTR'}) ) ||
+            defined($bits->{'TIOCCDTR'}) ) ||
           defined($bits->{'TIOCM_DTR'})
         )
        ) {

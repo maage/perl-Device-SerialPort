@@ -26,6 +26,7 @@
 
 use Device::SerialPort qw (:STAT);
 use strict;
+use warnings;
 
 =head1 NAME
 
