@@ -25,10 +25,6 @@ $ioctl_ok = 0;
 ($sysname, $nodename, $release, $version, $machine) = POSIX::uname();
 if ($sysname eq "SunOS" && $machine =~ /^sun/) {
 	eval "sub __sparc () {1;}";
-	$VMIN_MAX=1;
-}
-else {
-	$VMIN_MAX=255;
 }
 
 # Need to determine location (Linux, Solaris, AIX, BSD known & working)
@@ -122,8 +118,7 @@ use POSIX qw(:termios_h);
 use IO::Handle;
 
 use vars qw($bitset $bitclear $rtsout $dtrout $getstat $incount $outcount
-	    $txdone $dtrset $dtrclear $termioxflow $tcgetx $tcsetx $vmin_max);
-$vmin_max=$SerialJunk::VMIN_MAX;
+	    $txdone $dtrset $dtrclear $termioxflow $tcgetx $tcsetx);
 if ($SerialJunk::ioctl_ok) {
   eval {
     # silence .ph warnings
@@ -496,6 +491,9 @@ sub new {
     $self->{"C_CFLAG"} &= ~(CSIZE|PARENB);
     $self->{"C_CFLAG"} |= (CS8|CLOCAL);
     &write_settings($self);
+
+    read_char_time(0); 	  # no time
+    read_const_time(100); # 10th of a second
 
     $self->{ALIAS} = $self->{NAME};	# so "\\.\+++" can be changed
 ##    print "opening $self->{NAME}\n"; ## DEBUG ##
@@ -1302,6 +1300,9 @@ sub read_const_time {
     my $self = shift;
     if (@_) {
 	$self->{RCONST} = (shift)/1000; # milliseconds -> select_time
+	$self->{"C_VTIME"} = $self->{RCONST} * 10000; # wants tenths of sec
+	$self->{"C_VMIN"} = 0;
+	write_settings($self);
     }
     return $self->{RCONST}*1000;
 }
@@ -1326,7 +1327,7 @@ sub read {
     my $count_in = 0;
     my $string_in = "";
     my $in2 = "";
-    my $bufsize = $vmin_max;	# VMIN max (declared as char)
+    my $bufsize = 255;	# VMIN max (declared as char)
 
     while ($done < $wanted) {
 	my $size = $wanted - $done;
@@ -1355,10 +1356,11 @@ sub read_vmin {
     my $ok     = 0;
     return unless ($wanted > 0);
 
-    if ($self->{"C_VMIN"} != $wanted) {
-	$self->{"C_VMIN"} = $wanted;
-        write_settings($self);
-    }
+#	This appears dangerous under Solaris
+#    if ($self->{"C_VMIN"} != $wanted) {
+#	$self->{"C_VMIN"} = $wanted;
+#        write_settings($self);
+#    }
     my $rin = "";
     vec($rin, $self->{FD}, 1) = 1;
     my $ein = $rin;
@@ -1922,6 +1924,10 @@ sub dtr_active {
         $rc=ioctl($self->{HANDLE}, $on ? $bitset : $bitclear, $dtrout);
     }
     warn "dtr_active($on) ioctl: $!\n"    if (!$rc);
+
+    # ARG!  Solaris destroys termios settings after a DTR toggle!!
+    write_settings($self);
+
     return $rc;
 }
 
