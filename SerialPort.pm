@@ -2017,7 +2017,8 @@ sub close {
         $ok = POSIX::close($self->{FD});
 
     	# we need to explicitly close this handle
-    	$self->{HANDLE}->close if ($self->{HANDLE}->opened);
+    	$self->{HANDLE}->close if (defined($self->{HANDLE}) &&
+                                   $self->{HANDLE}->opened);
 
     	$self->{FD} = undef;
     	$self->{HANDLE} = undef;

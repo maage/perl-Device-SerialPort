@@ -2,6 +2,7 @@ Revision history for Perl extension Device::SerialPort.
 
 1.2.1 (CVS)
 	* SerialPort.pm: correction to READ by Martin Hans
+    * SerialPort.pm: corrected "close" call noticed by David R. Wilson
 	* updated debian build info.
 
 1.2.0 2004-11-09 (Kees)
