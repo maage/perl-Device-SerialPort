@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.53)
-AC_INIT([Device::SerialPort],1.2.0,devser-bugs@outflux.net)
+AC_INIT([Device::SerialPort],1.2.1,devser-bugs@outflux.net)
 AC_REVISION($Revision$)
 AC_CONFIG_SRCDIR([SerialPort.xs])
 AC_CONFIG_AUX_DIR(autotools)
@@ -22,13 +22,15 @@ AC_CHECK_HEADERS(sys/modem.h)		dnl HPUX
 dnl Actually find all the defines in the suspected headers
 dnl *** IF YOU MODIFY THESE, YOU MUST MODIFY SerialPort.xs ***
 AC_LANG(C)
-for kees_define in \
+for check_define in \
 	_SC_CLK_TCK \
 	TIOCMBIS TIOCMBIC TIOCMGET \
 	CRTSCTS OCRNL ONLCR ECHOKE ECHOCTL \
 	TIOCM_CAR TIOCM_CD TIOCM_RNG TIOCM_RI TIOCM_CTS TIOCM_DSR \
 	TIOCMIWAIT TIOCGICOUNT \
-	TIOCINQ TIOCOUTQ TIOCSER_TEMT TIOCM_LE \
+	TIOCINQ FIONREAD \
+	TIOCOUTQ \
+	TIOCSER_TEMT TIOCM_LE \
 	TIOCSERGETLSR \
 	TIOCSDTR TIOCCDTR \
 	TIOCM_RTS TIOCM_DTR \
@@ -38,7 +40,7 @@ for kees_define in \
 	B115200 B230400 B460800 B500000 B576000 B921600 B1000000 \
 	B1152000 B1500000 B2000000 B2500000 B3000000 B3500000 B4000000 \
 	; do
-	AC_MSG_CHECKING([definition of $kees_define])
+	AC_MSG_CHECKING([definition of $check_define])
 	AC_LINK_IFELSE(
 		[AC_LANG_PROGRAM(
 			[[
@@ -64,14 +66,14 @@ for kees_define in \
 # include <sys/modem.h>
 #endif
 			]],
-			[int a=$kees_define])
+			[int a=$check_define])
 		],
 		[
-			eval "kees_got_$kees_define=yes"
+			eval "check_got_$check_define=yes"
 			AC_MSG_RESULT([found])
 		],
 		[
-			eval "kees_got_$kees_define=no"
+			eval "check_got_$check_define=no"
 			AC_MSG_RESULT([missing])
 		]
 	)
@@ -83,8 +85,8 @@ dnl **************************************
 
 dnl Can ioctl at all
 AC_MSG_CHECKING([[serial control via ioctl]])
-if test "$kees_got_TIOCMBIS" = "yes" &&
-   test "$kees_got_TIOCMBIC" = "yes"; then
+if test "$check_got_TIOCMBIS" = "yes" &&
+   test "$check_got_TIOCMBIC" = "yes"; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
@@ -93,9 +95,9 @@ fi
 
 dnl Get/Set RTS
 AC_MSG_CHECKING([[read/write of RTS signal]])
-if test "$kees_got_TIOCMBIS" = "yes" &&
-   test "$kees_got_TIOCMBIC" = "yes" &&
-   test "$kees_got_TIOCM_RTS" = "yes"; then
+if test "$check_got_TIOCMBIS" = "yes" &&
+   test "$check_got_TIOCMBIC" = "yes" &&
+   test "$check_got_TIOCM_RTS" = "yes"; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
@@ -104,9 +106,9 @@ fi
 
 dnl Get/Set DTR
 AC_MSG_CHECKING([[read/write of DTR signal]])
-if test "$kees_got_TIOCMBIS" = "yes" &&
-   test "$kees_got_TIOCMBIC" = "yes" &&
-   test "$kees_got_TIOCM_DTR" = "yes"; then
+if test "$check_got_TIOCMBIS" = "yes" &&
+   test "$check_got_TIOCMBIC" = "yes" &&
+   test "$check_got_TIOCM_DTR" = "yes"; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
@@ -115,7 +117,7 @@ fi
 
 dnl Get modem lines
 AC_MSG_CHECKING([[read access to modem lines]])
-if test "$kees_got_TIOCMGET" = "yes"; then
+if test "$check_got_TIOCMGET" = "yes"; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
@@ -124,8 +126,8 @@ fi
 
 dnl Get Buffer Status
 AC_MSG_CHECKING([[read access to buffer status]])
-if test "$kees_got_TIOCINQ" = "yes" &&
-   test "$kees_got_TIOCOUTQ" = "yes"; then
+if test "$check_got_TIOCINQ" = "yes" &&
+   test "$check_got_TIOCOUTQ" = "yes"; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
@@ -134,7 +136,7 @@ fi
 
 dnl Get Line Status
 AC_MSG_CHECKING([[read access to serial line status]])
-if test "$kees_got_TIOCSERGETLSR" = "yes"; then
+if test "$check_got_TIOCSERGETLSR" = "yes"; then
 	AC_MSG_RESULT([yes])
 else
 	AC_MSG_RESULT([no])
@@ -143,10 +145,10 @@ fi
 
 dnl Weird Flow Control Setting
 AC_MSG_CHECKING([[normal CTS/RTS flow control]])
-if test "$kees_got_CTSXON" = "yes" &&
-   test "$kees_got_RTSXOFF" = "yes" &&
-   test "$kees_got_TCGETX" = "yes" &&
-   test "$kees_got_TCSETX" = "yes"; then
+if test "$check_got_CTSXON" = "yes" &&
+   test "$check_got_RTSXOFF" = "yes" &&
+   test "$check_got_TCGETX" = "yes" &&
+   test "$check_got_TCSETX" = "yes"; then
 	AC_MSG_RESULT([no])
 	AC_MSG_WARN([[Your system does CTS/RTS flow control strangely.  Hopefully, we can work around it]])
 else

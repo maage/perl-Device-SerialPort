@@ -5,7 +5,7 @@
 # $Id$
 #
 # Copyright (C) 1999, Bill Birthisel
-# Copyright (C) 2000-2005 Kees Cook
+# Copyright (C) 2000-2007 Kees Cook
 # kees@outflux.net, http://outflux.net/
 # 
 # This program is free software; you can redistribute it and/or
@@ -37,7 +37,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 # M.mmmrrr Major minor rev
 # Odd mmm is a devel version
 # Even mmm is a stable version
-$VERSION = 1.002_000;
+$VERSION = 1.002_001;
 
 require Exporter;
 
@@ -91,6 +91,9 @@ sub ECHOKE { return $bits->{'ECHOKE'} || 0; }
 sub ECHOCTL { return $bits->{'ECHOCTL'} || 0; }
 
 sub TIOCM_LE { return $bits->{'TIOCSER_TEMT'} || $bits->{'TIOCM_LE'} || 0; }
+
+# Set alternate bit names
+$bits->{'portable_TIOCINQ'} = $bits->{'TIOCINQ'} || $bits->{'FIONREAD'};
 
 ## Next 4 use Win32 names for compatibility
 
@@ -691,7 +694,7 @@ sub can_intr_count {
 }
 
 sub can_status {
-    return 1 if (defined($bits->{'TIOCINQ'}) &&
+    return 1 if (defined($bits->{'portable_TIOCINQ'}) &&
                  defined($bits->{'TIOCOUTQ'}));
     return 0;
     #return 0 unless ($incount && $outcount);
@@ -1850,7 +1853,7 @@ sub status {
     my @stat = (0, 0, 0, 0);
     my $mstat = " ";
 
-    return unless $self->ioctl('TIOCINQ', \$mstat);
+    return unless $self->ioctl('portable_TIOCINQ', \$mstat);
 
     $stat[ST_INPUT] = unpack('L', $mstat);
     return unless $self->ioctl('TIOCOUTQ', \$mstat);
@@ -3307,7 +3310,7 @@ perltoot - Tom Christiansen's Object-Oriented Tutorial
 =head1 COPYRIGHT
 
  Copyright (C) 1999, Bill Birthisel. All rights reserved.
- Copyright (C) 2000-2005, Kees Cook.  All rights reserved.
+ Copyright (C) 2000-2007, Kees Cook.  All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
