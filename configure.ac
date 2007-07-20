@@ -18,6 +18,7 @@ AC_CHECK_HEADERS(sys/termiox.h)		dnl AIX
 AC_CHECK_HEADERS(sys/termios.h)		dnl OpenBSD
 AC_CHECK_HEADERS(sys/ttycom.h)		dnl OpenBSD
 AC_CHECK_HEADERS(sys/modem.h)		dnl HPUX
+AC_CHECK_HEADERS(IOKit/serial/ioss.h)	dnl OSX
 
 dnl Actually find all the defines in the suspected headers
 dnl *** IF YOU MODIFY THESE, YOU MUST MODIFY SerialPort.xs ***
@@ -35,6 +36,7 @@ for check_define in \
 	TIOCSDTR TIOCCDTR \
 	TIOCM_RTS TIOCM_DTR \
 	CTSXON RTSXOFF TCGETX TCSETX \
+	IOSSIOSPEED \
 	B0 B50 B75 B110 B134 B150 B200 B300 B600 \
 	B1200 B1800 B2400 B4800 B9600 B19200 B38400 B57600 \
 	B115200 B230400 B460800 B500000 B576000 B921600 B1000000 \
@@ -65,6 +67,10 @@ for check_define in \
 #ifdef HAVE_SYS_MODEM_H
 # include <sys/modem.h>
 #endif
+#ifdef HAVE_IOKIT_SERIAL_IOSS_H
+# include <IOKit/serial/ioss.h>
+#endif
+
 			]],
 			[int a=$check_define])
 		],
