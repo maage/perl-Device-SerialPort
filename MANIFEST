@@ -39,6 +39,7 @@ autotools/depcomp
 autotools/install-sh
 autotools/missing
 autotools/mkinstalldirs
+configure.ac
 show-tiocm.c.test
 Device-SerialPort.spec
 META.yml                                 Module meta-data (added by MakeMaker)

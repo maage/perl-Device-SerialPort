@@ -1,9 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_PREREQ(2.53)
-AC_INIT([Device::SerialPort],1.3.1,devser-bugs@outflux.net)
+AC_PREREQ(2.61)
+AC_INIT([Device::SerialPort],[1.04],[devser-bugs@outflux.net])
 AC_REVISION($Revision$)
 AC_CONFIG_SRCDIR([SerialPort.xs])
-AC_CONFIG_AUX_DIR(autotools)
 AC_CONFIG_HEADERS([config.h])
 
 AC_PROG_CC
