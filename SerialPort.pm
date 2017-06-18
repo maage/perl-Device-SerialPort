@@ -2204,6 +2204,7 @@ sub READ {
     my $string_in = "";
 
     ($count_in, $string_in) = $self->read($size);
+    return unless (defined $count_in); # EOF
 
     $$buf = '' unless defined $$buf;
     my $buflen = length $$buf;
@@ -2292,6 +2293,7 @@ sub READLINE {
 sub GETC {
     my $self = shift;
     my ($count, $in) = $self->read(1);
+    return unless (defined $count); # EOF
     if ($count == 1) {
         return $in;
     }
